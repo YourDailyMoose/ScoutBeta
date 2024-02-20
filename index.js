@@ -356,7 +356,6 @@ client.on("messageDelete", async (message) => {
     }
   }
 
-  console.log('Logging enabled:', guildSettings.modules.logging.enabled);
   if (!guildSettings.modules.logging.enabled) return;
 
   if (!guildSettings.modules.logging.loggingChannels.message) return;
