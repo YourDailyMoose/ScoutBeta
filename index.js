@@ -389,6 +389,117 @@ client.on("messageDelete", async (message) => {
   loggingChannel.send({ embeds: [embed] });
 });
 
+client.on("messageUpdate", async (oldMessage, newMessage) => {
+
+  if (oldMessage.partial) {
+    try {
+      oldMessage = await oldMessage.fetch();
+    } catch (error) {
+      console.error("Something went wrong when fetching the message: ", error);
+      return;
+    }
+  }
+
+  if (newMessage.partial) {
+    try {
+      newMessage = await newMessage.fetch();
+    } catch (error) {
+      console.error("Something went wrong when fetching the message: ", error);
+      return;
+    }
+  }
+
+  if (oldMessage.author.bot) return;
+
+  if (oldMessage.content === newMessage.content) return;
+
+  const guildSettings = await getGuildSettings(oldMessage.guild.id);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${oldMessage.guild.name} (\`${oldMessage.guild.id}\`)\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+      const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+      fs.appendFile('errorLog.txt', errorMessage, (err) => {
+        if (err) throw err;
+      });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = oldMessage.guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(oldMessage.guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.message) return;
+
+  const loggingChannel = oldMessage.guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.message
+  );
+
+  if (!loggingChannel) return;
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.amber)
+    .setTitle("Message Edited")
+    .setDescription("A message was edited.")
+    .addFields(
+      {
+        name: "User:",
+        value: `<@${oldMessage.author.id}> (${oldMessage.author.id})`,
+      },
+      {
+        name: "Channel:",
+        value: `<#${oldMessage.channel.id}> (${oldMessage.channel.id})`,
+      },
+      {
+        name: "Old Message:",
+        value: oldMessage.content.length ? oldMessage.content : "None",
+      },
+      {
+        name: "New Message:",
+        value: newMessage.content.length ? newMessage.content : "None",
+      }
+    )
+    .setTimestamp();
+
+  loggingChannel.send({ embeds: [embed] });
+});
+
 client.once(Events.ClientReady, (c) => {
   const status = client.user.setActivity({
     type: ActivityType.Custom,
