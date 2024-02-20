@@ -62,3 +62,12 @@ Error ID: 0cc7ac42-faf1-43c8-933f-18a937f6ab6f, Error Details: TypeError: Cannot
     at Object.execute (/home/phoenix/MyPrograms/scout/commands/moderation/ban.js:58:58)
     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
     at async Client.<anonymous> (/home/phoenix/MyPrograms/scout/index.js:105:11)
+Error ID: 063fdcb5-55ff-41fb-a5ed-c37c2751efd2, Error Details: DiscordAPIError[50013]: Missing Permissions
+    at handleErrors (/home/phoenix/MyPrograms/scout-beta/node_modules/@discordjs/rest/dist/index.js:722:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async SequentialHandler.runRequest (/home/phoenix/MyPrograms/scout-beta/node_modules/@discordjs/rest/dist/index.js:1120:23)
+    at async SequentialHandler.queueRequest (/home/phoenix/MyPrograms/scout-beta/node_modules/@discordjs/rest/dist/index.js:953:14)
+    at async _REST.request (/home/phoenix/MyPrograms/scout-beta/node_modules/@discordjs/rest/dist/index.js:1266:22)
+    at async GuildBanManager.create (/home/phoenix/MyPrograms/scout-beta/node_modules/discord.js/src/managers/GuildBanManager.js:169:5)
+    at async Object.execute (/home/phoenix/MyPrograms/scout-beta/commands/moderation/ban.js:61:9)
+    at async Client.<anonymous> (/home/phoenix/MyPrograms/scout-beta/index.js:105:11)
