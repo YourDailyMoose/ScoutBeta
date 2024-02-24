@@ -28,15 +28,17 @@ function getDB() {
   return db;
 }
 
-async function onInvite(guildId) {
+async function setupServerdata(guildId) {
   // Assume 'db' is your database connection. Ensure it's properly initialized.
   const existingGuildData = await db.collection('botSettings').findOne({ _id: guildId });
 
   // If no document was found for the guild, insert new default settings
   if (!existingGuildData) {
     const guildData = {
-
-      "_id": Long.fromString(guildId),
+      
+      "_id": {
+        "$numberLong": `${guildId}`
+      },
       "moderationSettings": {
         "requireReason": false,
         "permissionHierarchy": true
@@ -96,12 +98,12 @@ async function onInvite(guildId) {
         "fun": true,
         "utility": true,
         "levels": {
-          "enabled": false,
+          "enabled": true,
           "levelRoles": [],
           "levelMessages": []
         },
         "logging": {
-          "enabled": true,
+          "enabled": false,
           "loggingChannels": {
             "moderation": null,
             "joinLeave": null,
@@ -115,10 +117,17 @@ async function onInvite(guildId) {
       "disabledCommands": []
     }
 
+    const levelData = {
+      "_id": Long.fromString(guildId),
+      "levels": {}
+    }
+
     try {
       await db.collection('botSettings').insertOne(guildData);
-      console.log(`Added guild ${guildId} to the database.`);
-      return false; // Return false because no existing document was found
+
+      await db.collection('guildLevels').insertOne(levelData);
+      return;
+
     } catch (error) {
       console.error(`Error adding guild ${guildId} to the database:`, error);
       throw error; // Throw the error to be handled by the caller
@@ -157,10 +166,10 @@ async function logPunishment(punishmentId, guildId, userId, punishmentType, reas
   }
   try {
     await db.collection('punishmentData').insertOne(punishmentData);
-    console.log(`Added punishment ${punishmentId} to the database.`);
+
     return false; // Return false because no existing document was found
   } catch (error) {
-    console.error(`Error adding punishment ${punishmentId} to the database:`, error);
+
     throw error; // Throw the error to be handled by the caller
   }
 }
@@ -188,19 +197,42 @@ async function getPunishment(punishmentId) {
 
 async function getUserXP(guildID, userID) {
   const longGuildId = Long.fromString(guildID);
-  const guild = await db.collection('guildLevels').findOne({ _id: longGuildId });
-  return guild?.levels[userID] || 0;
+  let guild = await db.collection('guildLevels').findOne({ _id: longGuildId });
+
+
+
+  // If the user isn't in the guild's levels, add the user with 0 XP
+  if (!(userID in guild.levels)) {
+
+    await addUserXP(guildID, userID, 0);
+    guild = await db.collection('guildLevels').findOne({ _id: longGuildId }); // Get the updated guild document
+  }
+
+
+
+  return guild.levels[userID];
 }
 
 async function addUserXP(guildID, userID, xpGain) {
   const longGuildId = Long.fromString(guildID);
   const guild = await db.collection('guildLevels').findOne({ _id: longGuildId });
-  if (!guild) {
-    await db.collection('guildLevels').insertOne({ _id: longGuildId, levels: { [userID]: xpGain } });
+
+
+
+  if (!(userID in guild.levels)) {
+    // If the user isn't in the guild's levels, add the user with xpGain XP
+
+    guild.levels[userID] = xpGain;
+    await db.collection('guildLevels').updateOne({ _id: longGuildId }, { $set: { levels: guild.levels } });
   } else {
-    guild.levels[userID] = (guild.levels[userID] || 0) + xpGain;
+    // If the user is in the guild's levels, increase their XP by xpGain
+
+    guild.levels[userID] += xpGain;
     await db.collection('guildLevels').updateOne({ _id: longGuildId }, { $set: { levels: guild.levels } });
   }
+
+  const updatedGuild = await db.collection('guildLevels').findOne({ _id: longGuildId });
+
 }
 
 async function getGuildXpData(guildID) {
@@ -210,26 +242,27 @@ async function getGuildXpData(guildID) {
 
 async function getUserLevel(guildID, userID) {
   const xp = await getUserXP(guildID, userID);
-  let baseXP = 100; // XP required for the first level
-  let factor = 1.15; // Each level requires 15% more XP than the previous level
+  let level = 1; // Start from level 1
+  let xpForNextLevel = 100; // XP required to reach level 1
+  let increment = 55; // Initial increment from level 1 to level 2
 
-  // If the user's XP is less than 100, they are level 0
-  if (xp < 100) {
-    return 0;
+  // Loop to find the user's level based on their XP
+  while (xp >= xpForNextLevel) {
+    xpForNextLevel += increment; // Calculate XP required for the next level
+    increment += 10; // Increase the increment for the next level
+    level++; // Increment level as the user meets the required XP for this level
   }
 
-  // Calculate the total XP required for each level
-  let totalXPForLevels = [];
-  for (let level = 1; level <= 100; level++) {
-    let totalXP = baseXP * Math.pow(level, factor);
-    totalXPForLevels.push(Math.round(totalXP));
-  }
-
-  // Find the user's level based on their XP
-  let level = totalXPForLevels.findIndex(levelXP => levelXP > xp) + 1;
-
-  return level;
+  // If the loop exits, the user's XP was not enough to reach the next level
+  // So, return the current level
+  return level - 1; // Subtract 1 to get the user's current level
 }
+
+
+
+
+
+
 
 async function getUserGuildRank(guildID, userID) {
   const longGuildId = Long.fromString(guildID);
@@ -240,14 +273,21 @@ async function getUserGuildRank(guildID, userID) {
 }
 
 function getLevelXPRequirement(level) {
-  let baseXP = 100; // XP required for the first level
-  let factor = 1.15; // Each level requires 15% more XP than the previous level
+  let baseXP = 100; // Base XP required to reach level 1 from level 0
+  if (level === 1) return baseXP; // Directly return baseXP for level 1
 
-  // Calculate the XP required for the specified level
-  let totalXP = baseXP * Math.pow(level, factor);
+  let increment = 55; // Initial increment for level 2
+  let totalXP = baseXP + increment; // XP required for level 2
 
-  return Math.round(totalXP);
+  // Loop to calculate XP required for levels beyond 2
+  for (let lvl = 3; lvl <= level; lvl++) {
+    increment += 10; // Increase the increment by 10 for each level after 2
+    totalXP += increment; // Add the new increment to get the total XP required for the current level
+  }
+
+  return totalXP;
 }
+
 
 
 module.exports = {
@@ -255,7 +295,7 @@ module.exports = {
   getDB,
   getUserXP,
   addUserXP,
-  onInvite,
+  setupServerdata,
   wipeGuildSettings,
   getGuildSettings,
   logPunishment,
@@ -265,5 +305,6 @@ module.exports = {
   getGuildXpData,
   getUserLevel,
   getUserGuildRank,
-  getLevelXPRequirement
+  getLevelXPRequirement,
+
 }

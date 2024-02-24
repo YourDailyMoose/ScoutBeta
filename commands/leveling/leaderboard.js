@@ -10,6 +10,17 @@ module.exports = {
         const guildXpData = await getGuildXpData(interaction.guild.id);
         const levels = guildXpData.levels;
 
+        if (Object.keys(levels).length === 0) {
+
+            const embed = new EmbedBuilder()
+                .setColor(botColours.amber)
+                .setTitle('Leaderboard')
+                .setDescription('There are no users with XP in this server. Time to get chatting!')
+                .setTimestamp();
+            await interaction.reply({ embeds: [embed] });
+            return;
+        }
+
         const sortedLevels = Object.entries(levels).sort((a, b) => b[1] - a[1]);
 
         const itemsPerPage = 10;

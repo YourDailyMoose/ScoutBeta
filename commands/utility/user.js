@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');  // Note: EmbedBuilder was corrected to MessageEmbed
-const { botColours } = require('../../index');
+const botColours = require('../../botColours.json');
 
 module.exports = {
   cooldown: 10,

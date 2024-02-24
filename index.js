@@ -17,7 +17,7 @@ const {
 } = require("discord.js");
 const {
   connectDatabase,
-  onInvite,
+  setupServerdata,
   wipeGuildSettings,
   getGuildSettings,
 } = require("./database");
@@ -41,6 +41,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildVoiceStates
   ],
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
@@ -267,11 +268,62 @@ client.on("messageDeleteBulk", async (messages) => {
 });
 
 client.on("guildCreate", async (guild) => {
+
+  const isUserBlacklisted = await isUserBlacklisted(guild.ownerId);
+
+  if (isUserBlacklisted) {
+
+    const embed = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle(`You have been blacklisted from Scout.`)
+      .setDescription('You are unable to add Scout to your server due to being blacklisted.')
+      .addFields(
+        { name: "Reason:", value: isUserBlacklisted.Reason },
+        { name: "Timestamp:", value: isUserBlacklisted.DateTime }
+      )
+      .setTimestamp()
+      .setFooter({
+        text: `To appeal, please join our Support Server and create a ticket`,
+      });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({ embeds: [embed], components: [supportServer] });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map((channel) => `${channel.name} (${channel.type})`)
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+    guild.leave();
+    return;
+
+
+  }
+
   const embed = new EmbedBuilder()
     .setColor(botColours.green) // Make sure botColours.green is defined
     .setTitle(`Welcome to Scout!`)
     .setDescription(
-      `Thank you for inviting Scout to your server! To get started, please run the \`/setup\` command.`
+      `Thank you for inviting Scout to your server! Please ask Moose for assistance with setting up in your server's channel in our discord server.`
     )
     .setTimestamp();
 
@@ -302,6 +354,8 @@ client.on("guildCreate", async (guild) => {
       `No suitable channel found to send message in guild ${guild.id}`
     );
   }
+
+    setupServerdata(guildid);
 });
 
 client.on("messageDelete", async (message) => {
@@ -368,6 +422,8 @@ client.on("messageDelete", async (message) => {
     }
   }
 
+
+
   if (!guildSettings.modules.logging.enabled) return;
 
   if (!guildSettings.modules.logging.loggingChannels.message) return;
@@ -390,15 +446,122 @@ client.on("messageDelete", async (message) => {
       {
         name: "Channel:",
         value: `<#${message.channel.id}> (${message.channel.id})`,
-      },
-      {
-        name: "Message:",
-        value: message.content.length ? message.content : "None",
       }
     )
     .setTimestamp();
 
+  // Split the message into chunks of 1024 characters
+  const messageChunks = message.content.match(/[\s\S]{1,1024}/g) || ["None"];
+
+  // Add each chunk as a separate field
+  // Add each chunk as a separate field
+  const messageFields = messageChunks.map((chunk, index) => ({
+    name: messageChunks.length === 1 ? 'Message:' : `Message (Part ${index + 1}):`,
+    value: chunk,
+  }));
+
+  embed.addFields(messageFields);
+
   loggingChannel.send({ embeds: [embed] });
+});
+
+client.on("voiceStateUpdate", async (oldState, newState) => {
+
+  if (oldState.channelId === newState.channelId) return;
+
+  const guildSettings = await getGuildSettings(oldState.guild.id);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${oldMessage.guild.name} (\`${oldMessage.guild.id}\`)\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = oldMessage.guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(oldMessage.guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+
+
+  if (guildSettings.modules.logging && guildSettings.modules.logging.loggingChannels.voice) {
+
+
+
+    let action, oldChannel, newChannel;
+
+    if (!oldState.channel && newState.channel) {
+      action = 'joined';
+      newChannel = newState.channel;
+    } else if (oldState.channel && !newState.channel) {
+      action = 'left';
+      oldChannel = oldState.channel;
+    } else if (oldState.channel && newState.channel) {
+      action = 'switched from';
+      oldChannel = oldState.channel;
+      newChannel = newState.channel;
+    } else {
+      return;
+    }
+
+    const logChannel = client.channels.cache.get(guildSettings.modules.logging.loggingChannels.voice);
+    if (!logChannel) return; // Ignore if the log channel doesn't exist
+
+    let embed;
+    if (action === 'switched from') {
+      embed = new EmbedBuilder()
+        .setTitle('Voice Channel Update')
+        .setDescription(`${newState.member} has ${action} ${oldChannel} to ${newChannel}.`)
+        .setColor(botColours.amber)
+        .setTimestamp();
+    } else {
+      const channel = action === 'joined' ? newChannel : oldChannel;
+      embed = new EmbedBuilder()
+        .setTitle('Voice Channel Update')
+        .setDescription(`${newState.member} has ${action} the voice channel ${channel}.`)
+        .setColor(botColours.amber)
+        .setTimestamp();
+    }
+
+    logChannel.send({ embeds: [embed] });
+  }
 });
 
 client.on("messageUpdate", async (oldMessage, newMessage) => {
@@ -509,8 +672,16 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
     )
     .setTimestamp();
 
-  loggingChannel.send({ embeds: [embed] });
+  const actionRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel("Jump to Message")
+      .setStyle("Link")
+      .setURL(newMessage.url)
+  );
+
+  loggingChannel.send({ embeds: [embed], components: [actionRow] });
 });
+
 
 client.once(Events.ClientReady, (c) => {
   const status = client.user.setActivity({

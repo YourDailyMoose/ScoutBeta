@@ -19,7 +19,7 @@ async function createRankImage(user, xp, rank, level, nextLevelXp) {
 
   // Draw XP
 
-  ctx.fillText(`XP: ${xp} (Level ${level})`, 310, 100); // Increase x-coordinate
+  ctx.fillText(`Level ${level}`, 310, 100); // Increase x-coordinate
 
   // Draw rank
   ctx.fillText(`Rank: ${rank}`, 310, 150); // Increase x-coordinate
@@ -60,10 +60,27 @@ async function createRankImage(user, xp, rank, level, nextLevelXp) {
   // Clip the context to the rounded rectangle shape
   ctx.clip();
 
-  // Draw progress bar fill with the gradient
+  let lastLevelXp
+
+  if (level === 0) {
+    lastLevelXp = 0;
+    nextLevelXp = 100;
+  } else {
+    lastLevelXp = getLevelXPRequirement(level); // Get the last level's XP requirement
+    nextLevelXp = getLevelXPRequirement(level + 1); // Get the next level's XP requirement
+  }
+  
+  let levelDifference = nextLevelXp - lastLevelXp; // Calculate the difference between the current and next level's XP requirements
+  let userProgress = xp - lastLevelXp; // Calculate how much XP the user has gained since the last level
+  
+  let progressPercentage = userProgress / levelDifference; // Calculate the progress percentage
+  let progress = progressPercentage * progressBarWidth; // Convert the progress percentage to a width for the progress bar
+  
   ctx.fillStyle = gradient;
-  let progress = (xp / nextLevelXp) * progressBarWidth;
+  
   ctx.fillRect(progressBarX, progressBarY, progress, progressBarHeight); // Fill the progress with the gradient
+  
+  // Restore the context before drawing the profile picture and border
 
   // Restore the context before drawing the profile picture and border
   ctx.restore();
@@ -71,7 +88,7 @@ async function createRankImage(user, xp, rank, level, nextLevelXp) {
   // Draw XP text
   ctx.font = '25px Lexend';
   ctx.fillStyle = '#ffffff';
-  let xpText = `Next Level in: ${Math.round(nextLevelXp) - xp}xp`;
+  let xpText = `${xp} / ${Math.round(nextLevelXp)}xp`;
   ctx.fillText(xpText, progressBarX + progressBarWidth - ctx.measureText(xpText).width, progressBarY + progressBarHeight + 30); // Position the text under the progress bar
 
   // Load and draw user avatar
@@ -114,16 +131,17 @@ module.exports = {
 
     if (getxp === 0) {
       if (user.id === interaction.user.id) {
-          await interaction.reply('You have no XP yet! Start chatting to earn XP.');
+        await interaction.reply('You have no XP yet! Start chatting to earn XP.');
       } else {
-          await interaction.reply(`${user.username} has no XP yet!`);
+        await interaction.reply(`${user.username} has no XP yet!`);
       }
-      
+
       return;
     }
     const getlevel = await getUserLevel(interaction.guild.id, user.id);
     const getrank = await getUserGuildRank(interaction.guild.id, user.id);
     const getnextLevelXP = await getLevelXPRequirement(getlevel + 1);
+
 
     const rankImage = await createRankImage(user, getxp, getrank, getlevel, getnextLevelXP);
 
