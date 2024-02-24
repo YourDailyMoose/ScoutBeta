@@ -58,7 +58,6 @@ module.exports = {
                     .setLabel('Support Server')
                     .setStyle('Link')
                     .setURL('https://discord.gg/BwD7MgVMuq')
-
                 );
         
               interaction.reply({ embeds: [errorEmbed], components: [supportServer], ephemeral: true });

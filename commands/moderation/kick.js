@@ -25,7 +25,7 @@ module.exports = {
       finalReason = reason;
     }
 
-    if (guildSettings.moderationSettings && guildSettings.moderationSettings.requireReason && !reason) {
+    if (guildSettings && guildSettings.moderationSettings && guildSettings.moderationSettings.requireReason && !reason) {
       const errorEmbed = new EmbedBuilder()
         .setTitle('Error')
         .setDescription('You must provide a reason.')

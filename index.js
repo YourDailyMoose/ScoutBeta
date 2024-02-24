@@ -15,15 +15,23 @@ const {
   PermissionsBitField,
   ActivityType,
 } = require("discord.js");
-
-const { connectDatabase, onInvite, wipeGuildSettings } = require("./database");
-
+const {
+  connectDatabase,
+  onInvite,
+  wipeGuildSettings,
+  getGuildSettings,
+} = require("./database");
+const {
+  handleBulkMessageDelete
+} = require("./messageHandlers/messageBulkDelete.js");
 const {
   connectBlacklistDatabase,
   isUserBlacklisted,
 } = require("./blacklistDatabase.js");
+const { handleExperienceGain } = require("./leveingSystem/handleLeveling.js");
 const dotenv = require("dotenv");
-const { getGuildSettings } = require("./database.js");
+const { v4: uuidv4 } = require("uuid");
+const botColours = require('./botColours.json')
 
 const client = new Client({
   intents: [
@@ -39,21 +47,13 @@ const client = new Client({
 
 dotenv.config();
 
+client.cooldowns = new Collection();
+
 client.commands = new Collection();
 
 const foldersPath = path.join(__dirname, "commands");
 const commandFolders = fs.readdirSync(foldersPath);
 
-const botColours = {
-  primary: "#69dc9e",
-  green: "#bcf7cb",
-  gray: "#2f3136",
-  red: "#f6786a",
-  amber: "#f8c57c",
-  purple: "#966FD6",
-};
-
-module.exports.botColours = botColours;
 
 for (const folder of commandFolders) {
   const commandsPath = path.join(foldersPath, folder);
@@ -258,11 +258,21 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
+client.on("messageCreate", async (message) => {
+  handleExperienceGain(message);
+});
+
+client.on("messageDeleteBulk", async (messages) => {
+  handleBulkMessageDelete(messages, client);
+});
+
 client.on("guildCreate", async (guild) => {
   const embed = new EmbedBuilder()
-    .setColor(botColours.primary) // Make sure botColours.green is defined
+    .setColor(botColours.green) // Make sure botColours.green is defined
     .setTitle(`Welcome to Scout!`)
-    .setDescription(`Thank you for inviting Scout Beta to your server!`)
+    .setDescription(
+      `Thank you for inviting Scout to your server! To get started, please run the \`/setup\` command.`
+    )
     .setTimestamp();
 
   const supportServer = new ActionRowBuilder().addComponents(
@@ -308,6 +318,8 @@ client.on("messageDelete", async (message) => {
 
   const guildSettings = await getGuildSettings(message.guild.id);
 
+
+
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
@@ -319,7 +331,7 @@ client.on("messageDelete", async (message) => {
       .setTimestamp();
 
     const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
-    fs.appendFile("errorLog.txt", errorMessage, (err) => {
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
       if (err) throw err;
     });
 
@@ -425,10 +437,10 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
       )
       .setTimestamp();
 
-      const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
-      fs.appendFile('errorLog.txt', errorMessage, (err) => {
-        if (err) throw err;
-      });
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
 
     const supportServer = new ActionRowBuilder().addComponents(
       new ButtonBuilder()

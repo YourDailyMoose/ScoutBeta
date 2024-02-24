@@ -25,7 +25,7 @@ module.exports = {
     }
     const guildSettings = await getGuildSettings(interaction.guild.id);
 
-    if (guildSettings && guildSettings.moderationSettings && guildSettings.moderationSettings.requireReason && !finalReason) {
+    if (guildSettings.moderationSettings && guildSettings.moderationSettings.requireReason && !finalReason) {
       const errorEmbed = new EmbedBuilder()
         .setTitle('Error')
         .setDescription('You must provide a reason.')
