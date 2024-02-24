@@ -27,11 +27,16 @@ async function handleExperienceGain(message) {
     return;
   }
 
+  const oldLevel = await getUserLevel(message.guild.id, message.author.id); // Get the old level before XP gain
+
   const xpGain = getRandomXP(10, 30); // Random XP between 10 and 30
   await addUserXP(message.guild.id, message.author.id, xpGain);
 
-  const currentLevel = await getUserLevel(message.guild.id, message.author.id); // Get the updated level after XP gain
-  announceLevelUp(message, currentLevel);
+  const newLevel = await getUserLevel(message.guild.id, message.author.id); // Get the new level after XP gain
+
+  if (newLevel > oldLevel) {
+    message.reply(`Congratulations <@${message.author.id}>! You leveled up to level \`${newLevel}\`! 🎉`);
+  }
 }
 
 function isOnCooldown(cooldownKey) {
@@ -51,11 +56,6 @@ function getRandomXP(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function announceLevelUp(message, level) {
-  if (level > 0) { // Assuming level 0 means no level up
-    message.reply(`Congratulations <@${message.author.id}>! You leveled up to level \`${level}\`! 🎉`);
-  }
-}
 
 function handleGuildSettingsError(message) {
   const errorId = uuidv4();
