@@ -29,7 +29,7 @@ async function handleExperienceGain(message) {
 
   const oldLevel = await getUserLevel(message.guild.id, message.author.id); // Get the old level before XP gain
 
-  const xpGain = getRandomXP(10, 30); // Random XP between 10 and 30
+  const xpGain = getRandomXP(15,25); // Random XP between 10 and 30
   await addUserXP(message.guild.id, message.author.id, xpGain);
 
   const newLevel = await getUserLevel(message.guild.id, message.author.id); // Get the new level after XP gain

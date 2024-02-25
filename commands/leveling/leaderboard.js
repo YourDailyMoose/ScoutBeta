@@ -10,6 +10,8 @@ module.exports = {
         const guildXpData = await getGuildXpData(interaction.guild.id);
         const levels = guildXpData.levels;
 
+        await interaction.deferReply();
+
         if (Object.keys(levels).length === 0) {
 
             const embed = new EmbedBuilder()
@@ -59,7 +61,7 @@ module.exports = {
                     .setDisabled(page === embeds.length - 1),
             );
 
-        await interaction.reply({ embeds: [embeds[page]], components: [row] });
+        await interaction.editReply({ embeds: [embeds[page]], components: [row] });
 
         const message = await interaction.fetchReply();
         const collector = message.createMessageComponentCollector({ time: 60000 });

@@ -1,17 +1,18 @@
 const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
+    cooldown: 10,
     data: new SlashCommandBuilder()
         .setName('guessthenumber')
         .setDescription('Guess the number game'),
     async execute(interaction) {
-        let answer = Math.floor(Math.random() * 100) + 1; // Random number between 1 and 100
+        let answer = Math.floor(Math.random() * 300) + 1; // Random number between 1 and 300
 
-        await interaction.reply('I have a number between 1 and 100. Can you guess it? You have 20 seconds and 15 guesses!');
+        await interaction.reply('I have a number between 1 and 300. Can you guess it? You have 30 seconds and 30 guesses!');
 
         // Filter function to only collect messages from the user who initiated the command, if the author is not a bot, and if the message content is a number
         const collectorFilter = m => m.author.id === interaction.user.id && !m.author.bot && !isNaN(m.content);
-        const collector = interaction.channel.createMessageCollector({ filter: collectorFilter, time: 20000, max: 15 });
+        const collector = interaction.channel.createMessageCollector({ filter: collectorFilter, time: 30000, max: 30 });
 
         collector.on('collect', m => {
             let guess = parseInt(m.content);

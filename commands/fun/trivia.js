@@ -4,6 +4,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 
 module.exports = {
+    cooldown: 10,
     data: new SlashCommandBuilder()
         .setName('trivia')
         .setDescription('Trivia game'),
@@ -34,10 +35,23 @@ module.exports = {
             const collector = interaction.channel.createMessageComponentCollector({ filter, time: 15000 });
 
             collector.on('collect', async i => {
-                if (i.customId === `trivia_${shuffledAnswers.indexOf(he.decode(question.correct_answer))}`) {
-                    await i.update({ content: 'Congratulations! You selected the correct answer.', components: [] });
+                const correctIndex = shuffledAnswers.indexOf(he.decode(question.correct_answer));
+                const selectedIndex = parseInt(i.customId.split('_')[1]);
+
+                buttons.forEach((button, index) => {
+                    if (index === correctIndex) {
+                        button.setStyle('Success');
+                    } else if (index === selectedIndex) {
+                        button.setStyle('Danger');
+                    } else {
+                        button.setDisabled(true);
+                    }
+                });
+
+                if (selectedIndex === correctIndex) {
+                    await i.update({ content: 'Congratulations! You selected the correct answer.', components: [row] });
                 } else {
-                    await i.update({ content: `Sorry, that's incorrect. The correct answer was: ${he.decode(question.correct_answer)}`, components: [] });
+                    await i.update({ content: `Sorry, that's incorrect. The correct answer was: ${he.decode(question.correct_answer)}`, components: [row] });
                 }
                 collector.stop();
             });

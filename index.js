@@ -290,6 +290,7 @@ client.on("messageCreate", async (message) => {
 });
 
 client.on("messageDeleteBulk", async (messages) => {
+
   handleBulkMessageDelete(messages, client);
 });
 
@@ -706,6 +707,315 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
   );
 
   loggingChannel.send({ embeds: [embed], components: [actionRow] });
+});
+
+client.on('guildMemberAdd', async (member) => {
+  const guild = member.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  const welcomeMessages = guildSettings.modules.welcomeMessages;
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${member.guild.name} (\`${member.guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = member.guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(member.guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!welcomeMessages.enabled) return; //if module is disabled, return
+
+  const messageChannel = guild.channels.cache.get(welcomeMessages.channelId);
+
+
+  if (!messageChannel) {
+    const error = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle('Error')
+      .setDescription('The welcome channel could not be found.')
+      .setTimestamp();
+
+    const firstChannel = member.guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(member.guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [error],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+      return;
+    }
+  }
+
+
+
+  if (welcomeMessages.enabled) {
+    const welcomeChannel = guild.channels.cache.get(welcomeMessages.channelId);
+    if (!welcomeChannel) {
+      console.error(`Channel with ID ${welcomeMessages.channelId} not found or the bot does not have access to it`);
+      return;
+    }
+
+    if (welcomeMessages.message.embed.enabled) {
+      const embedData = welcomeMessages.message.embed;
+      const embed = new EmbedBuilder()
+        .setTitle(embedData.title
+          .replace('<userName>', member.user.username)
+          .replace('<serverName>', guild.name)
+          .replace('<date>', new Date().toLocaleDateString())
+          .replace('<userId>', member.user.id)
+          .replace('<memberCount>', guild.memberCount)
+          .replace('<serverId>', guildId)
+          .replace('<mentionUser>', `<@${member.user.id}>`)
+        )
+        .setDescription(
+          embedData.description
+            .replace('<userName>', member.user.username)
+            .replace('<serverName>', guild.name)
+            .replace('<date>', new Date().toLocaleDateString())
+            .replace('<userId>', member.user.id)
+            .replace('<memberCount>', guild.memberCount)
+            .replace('<serverId>', guildId)
+            .replace('<mentionUser>', `<@${member.user.id}>`)
+        )
+        .setColor(embedData.color);
+
+      if (embedData.thumbnail.enabled) {
+        let thumbnailUrl = '';
+        if (embedData.thumbnail.profilePicture) {
+          thumbnailUrl = member.user.displayAvatarURL();
+        } else if (embedData.thumbnail.serverIcon) {
+          thumbnailUrl = guild.iconURL();
+        } else {
+          thumbnailUrl = embedData.thumbnail.url;
+        }
+        embed.setThumbnail(thumbnailUrl);
+      }
+
+      welcomeChannel.send({ embeds: [embed] });
+    } else if (welcomeMessages.message.text.enabled) {
+      const text = welcomeMessages.message.text.content
+        .replace('<userName>', member.user.username)
+        .replace('<serverName>', guild.name)
+        .replace('<date>', new Date().toLocaleDateString())
+        .replace('<userId>', member.user.id)
+        .replace('<memberCount>', guild.memberCount)
+        .replace('<serverId>', guildId)
+        .replace('<mentionUser>', `<@${member.user.id}>`)
+
+      welcomeChannel.send(text);
+    }
+  }
+});
+
+client.on('guildMemberRemove', async (member) => {
+  const guild = member.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  const leaveMessages = guildSettings.modules.leaveMessages;
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${member.guild.name} (\`${member.guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = member.guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(member.guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!leaveMessages.enabled) return; //if module is disabled, return
+
+  const messageChannel = guild.channels.cache.get(leaveMessages.channelId);
+
+  if (!messageChannel) {
+    const error = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle('Error')
+      .setDescription('The leave channel could not be found.')
+      .setTimestamp();
+
+    const firstChannel = member.guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(member.guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [error],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+      return;
+    }
+  }
+
+
+  if (leaveMessages.enabled) {
+    const leaveChannel = guild.channels.cache.get(leaveMessages.channelId);
+    if (!leaveChannel) {
+      console.error(`Channel with ID ${leaveMessages.channelId} not found or the bot does not have access to it`);
+      return;
+    }
+
+    if (leaveMessages.message.embed.enabled) {
+      const embedData = leaveMessages.message.embed;
+      const embed = new EmbedBuilder()
+        .setTitle(embedData.title
+          .replace('<userName>', member.user.username)
+          .replace('<serverName>', guild.name)
+          .replace('<date>', new Date().toLocaleDateString())
+          .replace('<userId>', member.user.id)
+          .replace('<memberCount>', guild.memberCount)
+          .replace('<serverId>', guildId)
+          .replace('<mentionUser>', `<@${member.user.id}>`)
+        )
+        .setDescription(
+          embedData.description
+            .replace('<userName>', member.user.username)
+            .replace('<serverName>', guild.name)
+            .replace('<date>', new Date().toLocaleDateString())
+            .replace('<userId>', member.user.id)
+            .replace('<memberCount>', guild.memberCount)
+            .replace('<serverId>', guildId)
+            .replace('<mentionUser>', `<@${member.user.id}>`)
+        )
+        .setColor(embedData.color);
+
+      if (embedData.thumbnail.enabled) {
+        let thumbnailUrl = '';
+        if (embedData.thumbnail.profilePicture) {
+          thumbnailUrl = member.user.displayAvatarURL();
+        } else if (embedData.thumbnail.serverIcon) {
+          thumbnailUrl = guild.iconURL();
+        } else {
+          thumbnailUrl = embedData.thumbnail.url;
+        }
+        embed.setThumbnail(thumbnailUrl);
+      }
+
+      leaveChannel.send({ embeds: [embed] });
+    } else if (leaveMessages.message.text.enabled) {
+      const text = leaveMessages.message.text.content
+        .replace('<userName>', member.user.username)
+        .replace('<serverName>', guild.name)
+        .replace('<date>', new Date().toLocaleDateString())
+        .replace('<userId>', member.user.id)
+        .replace('<memberCount>', guild.memberCount)
+        .replace('<serverId>', guildId)
+        .replace('<mentionUser>', `<@${member.user.id}>`)
+
+      leaveChannel.send(text);
+    }
+  }
+
 });
 
 

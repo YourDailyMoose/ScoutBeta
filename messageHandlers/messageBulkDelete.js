@@ -6,7 +6,15 @@ async function handleBulkMessageDelete(messages, client) {
 
     messages = messages.filter(message => !message.author.bot);
 
+
+    if (messages.size === 0) {
+        console.error('No messages found');
+        return;
+    }
+
     const guildId = messages.first().guild.id;
+
+
 
     const guildSettings = await getGuildSettings(guildId);
 
@@ -64,6 +72,8 @@ async function handleBulkMessageDelete(messages, client) {
 
     const loggingChannel = messages.first().guild.channels.cache.get(guildSettings.modules.logging.loggingChannels.message);
 
+
+
     if (!loggingChannel) return;
 
     let deletedMessages = "";
@@ -110,8 +120,7 @@ async function handleBulkMessageDelete(messages, client) {
             .addFields(
                 {
                     name: "Channel:",
-                    value: `${messages.first().channel.name} (${messages.first().channel.id
-                        })`,
+                    value: `<#${messages.first().channel.id}> (${messages.first().channel.id})`,
                 },
                 { name: "Message Count:", value: `${messages.size}` } // convert number to string
             )
@@ -119,15 +128,15 @@ async function handleBulkMessageDelete(messages, client) {
     );
 
     // get the channel from the mapping
-    const channel = client.channels.cache.get(loggingChannel);
+    const channel = client.channels.cache.get(loggingChannel.id);
 
     // send all embeds
     if (!channel) {
         console.error(`Logging channel with ID ${loggingChannel} not found`);
-      } else {
+    } else {
         // send all embeds
         embeds.forEach((embed) => channel.send({ embeds: [embed] }));
-      }
+    }
 }
 
 module.exports = { handleBulkMessageDelete };
