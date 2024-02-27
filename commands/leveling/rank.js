@@ -1,6 +1,8 @@
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
+const twemoji = require('twemoji');
 const { getUserXP, getUserLevel, getUserGuildRank, getLevelXPRequirement } = require('../../database');
+
 
 registerFont('Lexend-VariableFont_wght.ttf', { family: 'Lexend' });
 
@@ -9,7 +11,7 @@ async function createRankImage(user, xp, rank, level, nextLevelXp) {
   const ctx = canvas.getContext('2d');
 
   // Load and draw the background image
-  const backgroundImage = await loadImage('rankBackground.png');
+  const backgroundImage = await loadImage('images/rankBackground.png');
   ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
 
   // Draw username
@@ -19,7 +21,7 @@ async function createRankImage(user, xp, rank, level, nextLevelXp) {
 
   // Draw XP
 
-  ctx.fillText(`Level ${level}`, 310, 100); // Increase x-coordinate
+  ctx.fillText(`Level: ${level}`, 310, 100); // Increase x-coordinate
 
   // Draw rank
   ctx.fillText(`Rank: ${rank}`, 310, 150); // Increase x-coordinate
@@ -60,7 +62,7 @@ async function createRankImage(user, xp, rank, level, nextLevelXp) {
   // Clip the context to the rounded rectangle shape
   ctx.clip();
 
-  let lastLevelXp
+  let lastLevelXp;
 
   if (level === 0) {
     lastLevelXp = 0;
@@ -69,28 +71,55 @@ async function createRankImage(user, xp, rank, level, nextLevelXp) {
     lastLevelXp = getLevelXPRequirement(level); // Get the last level's XP requirement
     nextLevelXp = getLevelXPRequirement(level + 1); // Get the next level's XP requirement
   }
-  
-  let levelDifference = nextLevelXp - lastLevelXp; // Calculate the difference between the current and next level's XP requirements
-  let userProgress = xp - lastLevelXp; // Calculate how much XP the user has gained since the last level
-  
-  let progressPercentage = userProgress / levelDifference; // Calculate the progress percentage
+
+  let levelDifference = nextLevelXp - lastLevelXp; // Calculate the difference between the next level's XP and the current level's XP
+
+  let userProgress = nextLevelXp - xp; // Calculate how much more XP the user needs to reach the next level
+
+  let progressPercentage = 1 - (userProgress / levelDifference); // Calculate the progress percentage
   let progress = progressPercentage * progressBarWidth; // Convert the progress percentage to a width for the progress bar
-  
+
   ctx.fillStyle = gradient;
-  
+
   ctx.fillRect(progressBarX, progressBarY, progress, progressBarHeight); // Fill the progress with the gradient
-  
-  // Restore the context before drawing the profile picture and border
 
   // Restore the context before drawing the profile picture and border
   ctx.restore();
 
+  // Draw medal emoji
+
+  // Get the emoji code
+  let medalImagePath;
+let emojiImage;
+
+if (rank === 1) {
+    medalImagePath = 'images/1stIcon.png'; // Gold Medal
+} else if (rank === 2) {
+    medalImagePath = 'images/2ndIcon.png'; // Silver Medal
+} else if (rank === 3) {
+    medalImagePath = 'images/3rdIcon.png'; // Bronze Medal
+}
+
+if (medalImagePath) {
+    // Load the medal image
+    try {
+        emojiImage = await loadImage(medalImagePath);
+    } catch (err) {
+        console.error(`Failed to load image at path ${medalImagePath}`, err);
+        throw err;
+    }
+}
+
+if (emojiImage) {
+    // Draw the medal on the canvas
+    ctx.drawImage(emojiImage, canvas.width - emojiImage.width - 20, 20);
+}
+
   // Draw XP text
   ctx.font = '25px Lexend';
   ctx.fillStyle = '#ffffff';
-  let xpText = `${xp} / ${Math.round(nextLevelXp)}xp`;
+  let xpText = `${xp} / ${Math.round(nextLevelXp)} XP - ${userProgress} XP to next level`;
   ctx.fillText(xpText, progressBarX + progressBarWidth - ctx.measureText(xpText).width, progressBarY + progressBarHeight + 30); // Position the text under the progress bar
-
   // Load and draw user avatar
   let avatarUrl = user.displayAvatarURL({ format: 'png', dynamic: false });
   avatarUrl = avatarUrl.substr(0, avatarUrl.lastIndexOf('.')) + '.png';
@@ -114,10 +143,13 @@ async function createRankImage(user, xp, rank, level, nextLevelXp) {
   ctx.stroke();
 
 
+
+
   return canvas.toBuffer();
 }
 
 module.exports = {
+  cooldown: 20,
   data: new SlashCommandBuilder()
     .setName('rank')
     .setDescription('Displays the rank of a user')
@@ -128,6 +160,8 @@ module.exports = {
   async execute(interaction) {
     const user = interaction.options.getUser('user') || interaction.member.user;
     const getxp = await getUserXP(interaction.guild.id, user.id);
+
+
 
     if (getxp === 0) {
       if (user.id === interaction.user.id) {

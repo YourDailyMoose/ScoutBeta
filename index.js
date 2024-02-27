@@ -41,7 +41,8 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildModeration,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildEmojisAndStickers
   ],
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
@@ -1017,6 +1018,1088 @@ client.on('guildMemberRemove', async (member) => {
   }
 
 });
+
+client.on('roleCreate', async (role) => {
+  const guild = role.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  let fields = [
+    {
+      name: "Role:",
+      value: `${role.name} (${role.id})`,
+    },
+  ];
+
+  let permissions = role.permissions.toArray();
+  if (permissions.length > 0) {
+    fields.push({
+      name: "Role Permissions:",
+      value: permissions.join(", "),
+    });
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.amber)
+    .setTitle("Role Created")
+    .setDescription("A role was created.")
+    .addFields(fields)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+
+});
+
+
+client.on('roleUpdate', async (oldRole, newRole) => {
+  const guild = newRole.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  let fields = [
+    {
+      name: "Role:",
+      value: `${newRole.name} (${newRole.id})`,
+    },
+  ];
+
+  if (oldRole.name !== newRole.name) {
+    fields.push(
+      {
+        name: "Name:",
+        value: `${oldRole.name} -> ${newRole.name}`
+      }
+    );
+  }
+
+  if (oldRole.color !== newRole.color) {
+    fields.push(
+      {
+        name: "Colour:",
+        value: `${oldRole.color.toString(16)} -> ${newRole.color.toString(16)}`,
+      }
+    );
+  }
+
+  if (oldRole.hoist !== newRole.hoist) {
+    fields.push(
+      {
+        name: "Hoisted:",
+        value: `${oldRole.hoist.toString()} -> ${newRole.hoist.toString()}`,
+      }
+    );
+  }
+
+  if (oldRole.mentionable !== newRole.mentionable) {
+    fields.push(
+      {
+        name: "Mentionable:",
+        value: `${oldRole.mentionable.toString()} -> ${newRole.mentionable.toString()}`,
+      }
+    );
+  }
+
+  let oldPermissions = oldRole.permissions.toArray();
+  let newPermissions = newRole.permissions.toArray();
+
+  let addedPermissions = newPermissions.filter(permission => !oldPermissions.includes(permission));
+  let removedPermissions = oldPermissions.filter(permission => !newPermissions.includes(permission));
+
+  if (addedPermissions.length > 0) {
+    fields.push({
+      name: "Added Permissions:",
+      value: addedPermissions.map(permission => `+${permission}`).join(", "),
+    });
+  }
+
+  if (removedPermissions.length > 0) {
+    fields.push({
+      name: "Removed Permissions:",
+      value: removedPermissions.map(permission => `-${permission}`).join(", "),
+    });
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.amber)
+    .setTitle("Role Updated")
+    .setDescription("A role was updated.")
+    .addFields(fields)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+
+});
+
+client.on('roleDelete', async (role) => {
+  const guild = role.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  let fields = [
+    {
+      name: "Role:",
+      value: `${role.name} (${role.id})`,
+    },
+  ];
+
+  let permissions = role.permissions.toArray();
+  if (permissions.length > 0) {
+    fields.push({
+      name: "Role Permissions:",
+      value: permissions.join(", "),
+    });
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.red)
+    .setTitle("Role Deleted")
+    .setDescription("A role was deleted.")
+    .addFields(fields)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+
+});
+
+
+client.on('channelCreate', async (channel) => {
+  const guild = channel.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+
+
+  let channelType;
+  switch (channel.type) {
+    case 0:
+      channelType = 'GUILD_TEXT';
+      break;
+    case 2:
+      channelType = 'GUILD_VOICE';
+      break;
+    case 4:
+      channelType = 'GUILD_CATEGORY';
+      break;
+    case 5:
+      channelType = 'GUILD_ANNOUNCEMENT';
+      break;
+    case 10:
+      channelType = 'ANNOUNCEMENT_THREAD';
+      break;
+    case 11:
+      channelType = 'PUBLIC_THREAD';
+      break;
+    case 12:
+      channelType = 'PRIVATE_THREAD';
+      break;
+    case 13:
+      channelType = 'GUILD_STAGE_VOICE';
+      break;
+    case 14:
+      channelType = 'GUILD_DIRECTORY';
+      break;
+    case 15:
+      channelType = 'GUILD_FORUM';
+      break;
+    case 16:
+      channelType = 'GUILD_MEDIA';
+      break;
+    default:
+      channelType = 'Unknown';
+  }
+
+  let fields = [
+    {
+      name: "Channel:",
+      value: `${channel.name} (${channel.id})`,
+    },
+    {
+      name: "Type:",
+      value: channelType,
+    },
+  ];
+
+  if (channel.type === 0) { // GUILD_TEXT
+    fields.push({
+      name: "Category:",
+      value: channel.parent ? `${channel.parent.name} (${channel.parent.id})` : "None",
+    });
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.amber)
+    .setTitle("Channel Created")
+    .setDescription("A channel was created.")
+    .addFields(fields)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+
+client.on('channelUpdate', async (oldChannel, newChannel) => {
+
+  if (
+    oldChannel.name === newChannel.name &&
+    oldChannel.parent === newChannel.parent &&
+    oldChannel.nsfw === newChannel.nsfw &&
+    oldChannel.type === newChannel.type &&
+    oldChannel.rateLimitPerUser === newChannel.rateLimitPerUser
+  ) {
+    return;
+  }
+
+  const guild = newChannel.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  let fields = [
+    {
+      name: "Channel:",
+      value: `${newChannel.name} (${newChannel.id})`,
+    },
+  ];
+
+  if (oldChannel.name !== newChannel.name) {
+    fields.push(
+      {
+        name: "Name:",
+        value: `${oldChannel.name} -> ${newChannel.name}`
+      }
+    );
+  }
+
+  if (oldChannel.parent !== newChannel.parent) {
+    fields.push(
+      {
+        name: "Category:",
+        value: `${oldChannel.parent ? `${oldChannel.parent.name} (${oldChannel.parent.id})` : "None"} -> ${newChannel.parent ? `${newChannel.parent.name} (${newChannel.parent.id})` : "None"}`
+      }
+    );
+  }
+
+  if (oldChannel.nsfw !== newChannel.nsfw) {
+    fields.push(
+      {
+        name: "NSFW:",
+        value: `${oldChannel.nsfw} -> ${newChannel.nsfw}`
+      }
+    );
+  }
+
+  if (oldChannel.type !== newChannel.type && (oldChannel.type === 5 || newChannel.type === 5)) {
+    fields.push(
+      {
+        name: "Announcement:",
+        value: `${oldChannel.type === 5} -> ${newChannel.type === 5}`
+      }
+    );
+  }
+
+  if (oldChannel.rateLimitPerUser !== newChannel.rateLimitPerUser && newChannel.type !== 5) {
+    fields.push(
+      {
+        name: "Slowmode:",
+        value: `${oldChannel.rateLimitPerUser} -> ${newChannel.rateLimitPerUser}`
+      }
+    );
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.amber)
+    .setTitle("Channel Updated")
+    .setDescription("A channel was updated.")
+    .addFields(fields)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+client.on('channelDelete', async (channel) => {
+  const guild = channel.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  let channelType;
+  switch (channel.type) {
+    case 0:
+      channelType = 'GUILD_TEXT';
+      break;
+    case 2:
+      channelType = 'GUILD_VOICE';
+      break;
+    case 4:
+      channelType = 'GUILD_CATEGORY';
+      break;
+    case 5:
+      channelType = 'GUILD_ANNOUNCEMENT';
+      break;
+    case 10:
+      channelType = 'ANNOUNCEMENT_THREAD';
+      break;
+    case 11:
+      channelType = 'PUBLIC_THREAD';
+      break;
+    case 12:
+      channelType = 'PRIVATE_THREAD';
+      break;
+    case 13:
+      channelType = 'GUILD_STAGE_VOICE';
+      break;
+    case 14:
+      channelType = 'GUILD_DIRECTORY';
+      break;
+    case 15:
+      channelType = 'GUILD_FORUM';
+      break;
+    case 16:
+      channelType = 'GUILD_MEDIA';
+      break;
+    default:
+      channelType = 'Unknown';
+  }
+
+  let fields = [
+    {
+      name: "Channel:",
+      value: `${channel.name} (${channel.id})`,
+    },
+    {
+      name: "Type:",
+      value: channelType,
+    },
+  ];
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.red)
+    .setTitle("Channel Deleted")
+    .setDescription("A channel was deleted.")
+    .addFields(fields)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+client.on('guildBanAdd', async (guild, user) => {
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.red)
+    .setTitle("User Banned")
+    .setDescription(`${user.tag} (${user.id}) was banned.`)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+client.on('guildBanRemove', async (guild, user) => {
+
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.green)
+    .setTitle("User Unbanned")
+    .setDescription(`${user.tag} (${user.id}) was unbanned.`)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+client.on('emojiCreate', async (emoji) => {
+  const guild = emoji.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.amber)
+    .setTitle("Emoji Created")
+    .setDescription(`<:${emoji.name}:${emoji.id}> | ${emoji.name} (${emoji.id}) was created.`)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+client.on('emojiDelete', async (emoji) => {
+  const guild = emoji.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.red)
+    .setTitle("Emoji Deleted")
+    .setDescription(`${emoji.name} (${emoji.id}) was deleted.`)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+client.on('emojiUpdate', async (oldEmoji, newEmoji) => {
+  const guild = newEmoji.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  let fields = [];
+
+  if (oldEmoji.name !== newEmoji.name) {
+    fields.push(
+      {
+        name: "Name:",
+        value: `${oldEmoji.name} -> ${newEmoji.name}`
+      }
+    );
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(botColours.amber)
+    .setTitle("Emoji Updated")
+    .setDescription(`${oldEmoji.name} (${oldEmoji.id}) was updated.`)
+    .addFields(fields)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+
 
 
 client.once(Events.ClientReady, (c) => {

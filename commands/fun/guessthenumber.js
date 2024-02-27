@@ -8,11 +8,11 @@ module.exports = {
     async execute(interaction) {
         let answer = Math.floor(Math.random() * 300) + 1; // Random number between 1 and 300
 
-        await interaction.reply('I have a number between 1 and 300. Can you guess it? You have 30 seconds and 30 guesses!');
+        await interaction.reply('I have a number between 1 and 300. Can you guess it? You have 30 seconds!');
 
         // Filter function to only collect messages from the user who initiated the command, if the author is not a bot, and if the message content is a number
-        const collectorFilter = m => m.author.id === interaction.user.id && !m.author.bot && !isNaN(m.content);
-        const collector = interaction.channel.createMessageCollector({ filter: collectorFilter, time: 30000, max: 30 });
+        const collectorFilter = m => !m.author.bot && !isNaN(m.content);
+        const collector = interaction.channel.createMessageCollector({ filter: collectorFilter, time: 30000 });
 
         collector.on('collect', m => {
             let guess = parseInt(m.content);
@@ -20,9 +20,17 @@ module.exports = {
                 collector.stop();
                 m.reply(`Congratulations ${m.author}! You guessed the number, It was ${answer}`);
             } else if (guess < answer) {
-                m.reply(`\`${guess}\` is too low!`);
+                if (answer - guess <= 20) {
+                    m.reply(`You are getting close! But \`${guess}\` is too low!`);
+                } else {
+                    m.reply(`\`${guess}\` is too low!`);
+                }
             } else if (guess > answer) {
-                m.reply(`\`${guess}\` is too high!`);
+                if (guess - answer <= 20) {
+                    m.reply(`You are getting close! But \`${guess}\` is too high!`);
+                } else {
+                    m.reply(`\`${guess}\` is too high!`);
+                }
             }
         });
 

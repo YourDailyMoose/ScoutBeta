@@ -8,6 +8,7 @@ module.exports = {
     async execute(interaction) {
         const roles = interaction.guild.roles.cache
             .filter(role => role.name !== '@everyone') // Exclude the @everyone role
+            .sort((a, b) => b.position - a.position) // Sort roles by position
             .map(role => `${role} - \`${role.id}\``) // Mention the role and include its ID
             .join('\n');
         const roleEmbed = new EmbedBuilder()

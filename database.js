@@ -35,7 +35,7 @@ async function setupServerdata(guildId) {
   // If no document was found for the guild, insert new default settings
   if (!existingGuildData) {
     const guildData = {
-      
+
       "_id": {
         "$numberLong": `${guildId}`
       },
@@ -54,6 +54,7 @@ async function setupServerdata(guildId) {
       "modules": {
         "welcomeMessages": {
           "enabled": false,
+          "channelId": null,
           "message": {
             "embed": {
               "enabled": false,
@@ -75,6 +76,7 @@ async function setupServerdata(guildId) {
         },
         "leaveMessages": {
           "enabled": false,
+          "channelId": null,
           "message": {
             "embed": {
               "enabled": false,
@@ -241,23 +243,22 @@ async function getGuildXpData(guildID) {
 }
 
 async function getUserLevel(guildID, userID) {
-  const xp = await getUserXP(guildID, userID);
-  let level = 1; // Start from level 1
-  let xpForNextLevel = 100; // XP required to reach level 1
-  let increment = 55; // Initial increment from level 1 to level 2
+  const userXP = await getUserXP(guildID, userID); // Fetch the user's current XP
+  let level = 1; // Start checking from level 1
+  let totalXP = 0; // Initialize total XP needed to reach the current checking level
 
-  // Loop to find the user's level based on their XP
-  while (xp >= xpForNextLevel) {
-    xpForNextLevel += increment; // Calculate XP required for the next level
-    increment += 10; // Increase the increment for the next level
-    level++; // Increment level as the user meets the required XP for this level
+  while (true) {
+    let xpForNextLevel = 5 * Math.pow(level, 2) + 50 * level + 100; // XP needed to reach the next level from the current level
+    totalXP += xpForNextLevel; // Add XP for the next level to the total XP
+    if (userXP < totalXP) {
+      // If user's XP is less than total XP needed to reach the next level, the current level is the user's level
+      break;
+    }
+    level++; // Move to the next level
   }
 
-  // If the loop exits, the user's XP was not enough to reach the next level
-  // So, return the current level
-  return level - 1; // Subtract 1 to get the user's current level
+  return level; // Return the determined level
 }
-
 
 
 
@@ -273,21 +274,14 @@ async function getUserGuildRank(guildID, userID) {
 }
 
 function getLevelXPRequirement(level) {
-  let baseXP = 100; // Base XP required to reach level 1 from level 0
-  if (level === 1) return baseXP; // Directly return baseXP for level 1
+  let totalXP = 0; // Initialize total XP needed to reach the specified level
 
-  let increment = 55; // Initial increment for level 2
-  let totalXP = baseXP + increment; // XP required for level 2
-
-  // Loop to calculate XP required for levels beyond 2
-  for (let lvl = 3; lvl <= level; lvl++) {
-    increment += 10; // Increase the increment by 10 for each level after 2
-    totalXP += increment; // Add the new increment to get the total XP required for the current level
+  for (let l = 1; l < level; l++) { // Start from level 1 up to the level just before the specified level
+    totalXP += 5 * Math.pow(l, 2) + 50 * l + 100; // Sum up the XP needed for each level
   }
 
-  return totalXP;
+  return totalXP; // Return the total XP needed to reach the specified level
 }
-
 
 
 module.exports = {
