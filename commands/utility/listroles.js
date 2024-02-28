@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const botColours = require('../../botColours.json');
 
 module.exports = {
     cooldown: 10,
@@ -13,7 +14,9 @@ module.exports = {
             .join('\n');
         const roleEmbed = new EmbedBuilder()
             .setTitle('Roles')
-            .setDescription(roles);
+            .setDescription(roles)
+            .setColor(botColours.primary);
+            
         interaction.reply({ embeds: [roleEmbed] });
     },
 };

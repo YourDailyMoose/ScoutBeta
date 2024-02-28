@@ -4,14 +4,21 @@ module.exports = {
     cooldown: 10,
     data: new SlashCommandBuilder()
         .setName('guessthenumber')
-        .setDescription('Guess the number game'),
+        .setDescription('Guess the number game')
+        .addIntegerOption(option =>
+            option.setName('max')
+                .setDescription('The maximum number for the game')
+                .setRequired(false)
+                .setMinValue(100)
+                .setMaxValue(10000)),
     async execute(interaction) {
-        let answer = Math.floor(Math.random() * 300) + 1; // Random number between 1 and 300
+        const max = interaction.options.getInteger('max') || 100;
+        let answer = Math.floor(Math.random() * max) + 1; // Random number between 1 and max
 
-        await interaction.reply('I have a number between 1 and 300. Can you guess it? You have 30 seconds!');
+        await interaction.reply(`I have a number between 1 and ${max}. Can you guess it? You have 30 seconds!`);
 
         // Filter function to only collect messages from the user who initiated the command, if the author is not a bot, and if the message content is a number
-        const collectorFilter = m => !m.author.bot && !isNaN(m.content);
+        const collectorFilter = m => !isNaN(m.content);
         const collector = interaction.channel.createMessageCollector({ filter: collectorFilter, time: 30000 });
 
         collector.on('collect', m => {
