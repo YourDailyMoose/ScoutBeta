@@ -5,21 +5,22 @@ const { v4: uuidv4 } = require('uuid');
 
 let db;
 
-async function connectDatabase(uri) {
-  try {
-    const client = new MongoClient(uri, {
-      serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-      }
-    });
+// Path to your certificate
+const credentials = './mongoCert/X509-cert-6949459650898832615.pem';
 
+
+// MongoDB connection 
+const client = new MongoClient('mongodb+srv://scout.792kxhq.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority&appName=Scout', {
+  tlsCertificateKeyFile: credentials,
+  serverApi: ServerApiVersion.v1,
+});
+
+async function connectToDatabase() {
+  try {
     await client.connect();
     db = client.db('botData');
   } catch (error) {
-    console.error('Failed to connect to the database', error);
-    throw error; // re-throw the error if you want to handle it further up the call stack
+    console.error('Error connecting to MongoDB:', error);
   }
 }
 
@@ -283,9 +284,240 @@ function getLevelXPRequirement(level) {
   return totalXP; // Return the total XP needed to reach the specified level
 }
 
+async function registerGiveaway(guildId, channelId, messageId, prize, winners, duration, timestamp) {
+  const giveawayData = {
+    _id: new ObjectId(),
+    messageId: Long.fromString(messageId),
+    guildId: Long.fromString(guildId),
+    channelId: Long.fromString(channelId),
+    prize: prize,
+    winners: winners,
+    duration: duration,
+    timestamp: timestamp,
+    entries: [], // Initialize entries as an empty array
+  };
+  try {
+    await db.collection('giveawayData').insertOne(giveawayData);
+
+    return;
+  } catch (error) {
+
+    throw error; // Throw the error to be handled by the caller
+  }
+}
+
+async function enterGiveaway(userId, messageId) {
+  const longUserId = Long.fromString(userId);
+  // const longMessageId = Long.fromString(messageId);
+  const giveaway = await db.collection('giveawayData').findOne({ _id: messageId });
+
+  if (!giveaway) {
+    return "notFound";
+  }
+
+  if (giveaway.entries.includes(longUserId)) {
+    return "alreadyEntered";
+  }
+
+  giveaway.entries.push(longUserId);
+  await db.collection('giveawayData').updateOne({ _id: messageId }, { $set: { entries: giveaway.entries } });
+
+  return "entered";
+}
+
+async function getGiveawayData(messageId) {
+  const longMessageId = Long.fromString(messageId);
+  return await db.collection('giveawayData').findOne({ _id: longMessageId });
+
+}
+
+async function getAllGiveaways() {
+  return await db.collection('giveawayData').find({}).toArray();
+}
+
+async function deleteGiveaway(messageId) {
+  const longMessageId = Long.fromString(messageId);
+  try {
+    await db.collection('giveawayData').deleteOne({ _id: longMessageId });
+    return (true)
+  }
+  catch (error) {
+    console.error(`Error deleting giveaway ${messageId} from the database:`, error);
+    return (false)
+  }
+}
+
+async function isUserBlacklisted(userId) {
+  try {
+    const collection = db.collection("blacklistData");
+    const query = { type: "user", userid: userId, active: true };
+    const blacklistedUser = await collection.findOne(query);
+
+    return blacklistedUser;
+  } catch (err) {
+    console.error("Error checking if user is blacklisted:", err);
+    return null;
+  }
+}
+
+async function oauthCallbackData(userEntry) {
+
+  const collection = client.db('websiteData').collection("userData");
+
+  // Update or insert user data in MongoDB
+  await collection.updateOne(
+    { "userData.id": userEntry.userData.id }, // Filter by user ID
+    { $set: userEntry }, // Update or set the user data
+    { upsert: true } // Create a new document if no documents match the filter
+  );
+}
+
+async function fetchUserData(dataKey) {
+
+  const collection = client.db('websiteData').collection("userData");
+
+  const userData = await collection.findOne({ dataKey });
+
+  
+  if (!userData) {
+    return null;
+  } else {
+    return userData;
+  }
+
+}
+
+async function getBotGuilds(longGuildIds) {
+  const collection = client.db('botData').collection("botSettings");
+
+  const guilds = await collection.find({ _id: { $in: longGuildIds } }).toArray();
+
+  return guilds;
+}
+
+async function updateGuildModuleSettings(guildId, module, enabled) {
+  const collection = client.db('botData').collection('botSettings');
+
+  // Convert guildId to a Long instance
+  const longGuildId = Long.fromString(guildId);
+
+  const currentSettings = await collection.findOne({ _id: longGuildId });
+  
+  if (currentSettings && currentSettings.modules[module] && currentSettings.modules[module].enabled === enabled) {
+    return { message: 'No changes were made' };
+  }
+
+  const result = await collection.updateOne(
+    { _id: longGuildId },
+    { $set: { [`modules.${module}.enabled`]: enabled } },
+    { upsert: true }
+  );
+
+  return { status: 'success' };
+}
+
+async function getUserAccessToGuild(guildId, dataKey) {
+  const collection = client.db('websiteData').collection("userData");
+  const user = await collection.findOne({ dataKey });
+
+  if (!user) {
+    return { status: 'User not found' };
+  }
+
+  const guild = user.guilds.find((guild) => guild.id === guildId);
+
+  if (!guild) {
+    return { status: 'Guild not found' };
+  }
+
+  const isOwner = guild.owner;
+  const isAdmin = (guild.permissions & 0x8) === 0x8 || (guild.permissions & 0x20) === 0x20;
+
+  let role;
+  if (isOwner) {
+    role = 'Owner';
+  } else if (isAdmin) {
+    role = 'Admin';
+  } else {
+    role = 'None';
+  }
+  console.log(role);
+  return { role };
+}
+
+async function logoutUser(dataKey) {
+  const collection = client.db('websiteData').collection("userData");
+
+  const result = await collection.updateOne(
+    { dataKey: dataKey }, // Filter
+    { $set: { token: null, dataKey: null } } // Update
+  );
+
+  return result;
+}
+
+async function isModuleEnabled(guildId, moduleName) {
+  // Get the guild settings document for the given guild ID
+  const longGuildId = Long.fromString(guildId);
+  const guildSettings = await db.collection('botSettings').findOne({ _id: longGuildId });
+
+  if (!guildSettings) {
+    throw new Error('Guild Settings not Found for Module Check')
+  }
+
+  // Check if the module exists in the guild settings
+  if (!(moduleName in guildSettings.modules)) {
+    throw new Error(`Module ${moduleName} does not exist in guild settings.`);
+  }
+
+  // Get the module settings
+  const moduleSettings = guildSettings.modules[moduleName];
+
+  // If the module settings is a boolean, return it
+  // Otherwise, return the value of the "enabled" field
+  return typeof moduleSettings === 'boolean' ? moduleSettings : moduleSettings.enabled;
+}
+
+async function updateServerSettings(guildId, setting, value) {
+  const longGuildId = Long.fromString(guildId);
+  const guildSettings = await db.collection('botSettings').findOne({ _id: longGuildId });
+
+  if (!guildSettings) {
+    throw new Error('Guild Settings not Found for Module Check')
+  }
+
+  if (setting === 'colours') {
+    if (typeof value !== 'object' || !('default' in value) || !('success' in value) || !('error' in value) || !('warning' in value)) {
+      throw new Error('Invalid value for colours setting');
+    }
+
+    await db.collection('botSettings').updateOne(
+      { _id: longGuildId },
+      { $set: { 'serverSettings.colours': value } }
+    );
+  } else if (setting === 'timezone') {
+    if (typeof value !== 'string') {
+      throw new Error('Invalid value for timezone setting');
+    }
+
+    await db.collection('botSettings').updateOne(
+      { _id: longGuildId },
+      { $set: { 'serverSettings.timezone': value } }
+    );
+  } else {
+    throw new Error('Invalid setting');
+  }
+}
+
+async function getBlacklists() {
+  const collection = db.collection("blacklistData");
+  const blacklists = await collection.find({}).toArray();
+  return blacklists;
+}
+
 
 module.exports = {
-  connectDatabase,
+  connectToDatabase,
   getDB,
   getUserXP,
   addUserXP,
@@ -300,5 +532,19 @@ module.exports = {
   getUserLevel,
   getUserGuildRank,
   getLevelXPRequirement,
+  registerGiveaway,
+  enterGiveaway,
+  getGiveawayData,
+  getAllGiveaways,
+  deleteGiveaway,
+  isUserBlacklisted,
+  oauthCallbackData,
+  fetchUserData,
+  getBotGuilds,
+  updateGuildModuleSettings,
+  getUserAccessToGuild,
+  logoutUser,
+  isModuleEnabled,
+  updateServerSettings
 
 }

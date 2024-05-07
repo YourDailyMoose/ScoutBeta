@@ -35,7 +35,7 @@ async function handleExperienceGain(message) {
   const newLevel = await getUserLevel(message.guild.id, message.author.id); // Get the new level after XP gain
 
   if (newLevel > oldLevel) {
-    message.reply(`Congratulations <@${message.author.id}>! You leveled up to level \`${newLevel}\`! 🎉`);
+    message.channel.send(`Congratulations <@${message.author.id}>! You leveled up to level \`${newLevel}\`! 🎉`);
   }
 }
 

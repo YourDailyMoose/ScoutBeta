@@ -74,7 +74,7 @@ module.exports = {
             collector.on('collect', async i => {
                 const correctIndex = shuffledAnswers.indexOf(he.decode(question.correct_answer));
                 const selectedIndex = parseInt(i.customId.split('_')[1]);
-            
+
                 buttons.forEach((button, index) => {
                     if (index === correctIndex) {
                         button.setStyle('Success');
@@ -86,7 +86,7 @@ module.exports = {
                         button.setDisabled(true);
                     }
                 });
-            
+
                 if (selectedIndex === correctIndex) {
                     await i.update({ content: 'Congratulations! You selected the correct answer.', components: [row] });
                 } else {
@@ -95,8 +95,19 @@ module.exports = {
                 collector.stop();
             });
 
-            collector.on('end', collected => {
-                if (collected.size === 0) interaction.editReply({ content: `Sorry, time's up! The correct answer was: ${he.decode(question.correct_answer)}`, components: [] });
+            collector.on('end', async collected => {
+                try {
+                    // Check if the message exists before trying to edit it
+                    const originalMessage = await interaction.fetchReply().catch(() => null);
+                    if (!originalMessage) {
+                        return; // If the original message has been deleted, return and do not attempt to edit the message
+                    }
+                    if (collected.size === 0) {
+                        await interaction.editReply({ content: `Sorry, time's up! The correct answer was: ${he.decode(question.correct_answer)}`, components: [] });
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
             });
         }
         catch (error) {

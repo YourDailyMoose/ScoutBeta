@@ -1,0 +1,87 @@
+{
+    "_id": {
+        "$numberLong": "1095667937282625589"
+    },
+    "moderationSettings": {
+        "requireReason": false,
+        "permissionHierarchy": true
+    },
+    "rolePermissions": {
+        "godRoles": [],
+        "adminRoles": [],
+        "banRoles": [],
+        "kickRoles": [],
+        "muteRoles": [],
+        "warnRoles": []
+    },
+    "modules": {
+        "welcomeMessages": {
+            "enabled": false,
+            "channelId": null,
+            "message": {
+                "embed": {
+                    "enabled": false,
+                    "title": "Welcome to the server!",
+                    "description": "Thanks for joining the server, <user>!",
+                    "thumbnail": {
+                        "enabled": false,
+                        "profilePicture": true,
+                        "serverIcon": false,
+                        "url": ""
+                    },
+                    "color": {
+                        "$numberInt": "11566958"
+                    }
+                },
+                "text": {
+                    "enabled": true,
+                    "content": "Welcome to the server <user>!"
+                }
+            }
+        },
+        "leaveMessages": {
+            "enabled": false,
+            "channelId": null,
+            "message": {
+                "embed": {
+                    "enabled": false,
+                    "title": "Goodbye!",
+                    "description": "Goodbye, <user>!",
+                    "thumbnail": {
+                        "enabled": false,
+                        "profilePicture": true,
+                        "serverIcon": false,
+                        "url": ""
+                    },
+                    "color": {
+                        "$numberInt": "11566958"
+                    }
+                },
+                "text": {
+                    "enabled": true,
+                    "content": "Goodbye <user>!"
+                }
+            }
+        },
+        "moderation": true,
+        "fun": true,
+        "utility": true,
+        "levels": {
+            "enabled": true,
+            "levelRoles": [],
+            "levelMessages": []
+        },
+        "logging": {
+            "enabled": true,
+            "loggingChannels": {
+                "moderation": "1096544759587295293",
+                "joinLeave": "1096544759587295293",
+                "message": "1096544759587295293",
+                "voice": "1096544759587295293",
+                "memberChanges": "1096544759587295293",
+                "serverChanges": "1096544759587295293"
+            }
+        }
+    },
+    "disabledCommands": []
+}

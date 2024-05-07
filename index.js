@@ -1,37 +1,18 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const {
-  Client,
-  Collection,
-  Events,
-  GatewayIntentBits,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ChannelType,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
-  SelectMenuBuilder,
-  PermissionsBitField,
-  ActivityType,
-} = require("discord.js");
-const {
-  connectDatabase,
-  setupServerdata,
-  wipeGuildSettings,
-  getGuildSettings,
-} = require("./database");
-const {
-  handleBulkMessageDelete
-} = require("./messageHandlers/messageBulkDelete.js");
-const {
-  connectBlacklistDatabase,
-  isUserBlacklisted,
-} = require("./blacklistDatabase.js");
+const { Client, Collection, Events, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ChannelType,
+  StringSelectMenuBuilder, StringSelectMenuOptionBuilder, SelectMenuBuilder, PermissionsBitField, ActivityType, IntegrationExpireBehavior, ApplicationCommandOptionWithChoicesAndAutocompleteMixin, SlashCommandStringOption, } = require("discord.js");
+const { connectToDatabase, setupServerdata, wipeGuildSettings, getGuildSettings, enterGiveaway, logoutUser, getAllGiveaways, isUserBlacklisted, oauthCallbackData, fetchUserData, getBotGuilds, updateGuildModuleSettings, getUserAccessToGuild, isModuleEnabled, updateServerSettings } = require("./database");
+const { scheduleGiveawayEnd } = require('./giveawaySystem/verdictHandling.js');
+const { handleBulkMessageDelete } = require("./messageHandlers/messageBulkDelete.js");
 const { handleExperienceGain } = require("./leveingSystem/handleLeveling.js");
 const dotenv = require("dotenv");
 const { v4: uuidv4 } = require("uuid");
 const botColours = require('./botColours.json')
+const express = require('express');
+const axios = require('axios');
+const { MongoClient, Long, ServerApiVersion, ConnectionPoolReadyEvent } = require('mongodb');
+dotenv.config();
 
 const client = new Client({
   intents: [
@@ -47,7 +28,16 @@ const client = new Client({
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
 
-dotenv.config();
+
+
+connectToDatabase()
+  .then(() => {
+    console.log("Connected to Scout Database");
+  })
+  .catch((err) => {
+    console.error("Failed to connect to MongoDB", err);
+  });
+
 
 client.cooldowns = new Collection();
 
@@ -66,6 +56,9 @@ for (const folder of commandFolders) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
 
+    // Add the module name (folder name) to the command object
+    command.moduleName = folder;
+
     if ("data" in command && "execute" in command) {
       client.commands.set(command.data.name, command);
     } else {
@@ -76,26 +69,7 @@ for (const folder of commandFolders) {
   }
 }
 
-//Database Setup
 
-const mongoURI = process.env.MONGODB_URI;
-const blacklistDBuri = process.env.BLACKLIST_DB_URI;
-
-connectDatabase(mongoURI)
-  .then(() => {
-    console.log("Connected to Scout Database");
-  })
-  .catch((err) => {
-    console.error("Failed to connect to MongoDB", err);
-  });
-
-connectBlacklistDatabase(blacklistDBuri)
-  .then(() => {
-    console.log("Connected to Blacklist Database");
-  })
-  .catch((err) => {
-    console.error("Failed to connect to MongoDB", err);
-  });
 
 //Events
 
@@ -109,8 +83,8 @@ client.on("interactionCreate", async (interaction) => {
       .setColor(botColours.red)
       .setTitle(`You have been blacklisted from Scout.`)
       .addFields(
-        { name: "Reason:", value: blacklistedUser.Reason },
-        { name: "Timestamp:", value: blacklistedUser.DateTime }
+        { name: "Reason:", value: blacklistedUser.reason },
+        { name: "Timestamp:", value: new Date(blacklistedUser.timestamp * 1000).toUTCString() }
       )
       .setTimestamp()
       .setFooter({
@@ -129,8 +103,6 @@ client.on("interactionCreate", async (interaction) => {
       components: [supportServerButton],
     });
   }
-
-
 
 
   if (interaction.isCommand()) {
@@ -165,6 +137,21 @@ client.on("interactionCreate", async (interaction) => {
 
     timestamps.set(interaction.user.id, now);
     setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount);
+
+    const moduleName = command.moduleName;
+
+    if (moduleName !== 'usage') {
+      const moduleEnabledStatus = await isModuleEnabled(interaction.guild.id, moduleName);
+
+      if (!moduleEnabledStatus) {
+        const embed = new EmbedBuilder()
+          .setColor(botColours.amber)
+          .setTitle(`Module Disabled`)
+          .setDescription(`The ${moduleName} module is currently disabled.`);
+
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+    }
 
     if (command.permission) {
       if (
@@ -281,6 +268,20 @@ client.on("interactionCreate", async (interaction) => {
           content: "There was an error while executing this command!",
           ephemeral: true,
         });
+      }
+    }
+  } else if (interaction.isButton()) {
+    if (interaction.customId === 'enter_giveaway') {
+
+      console.log(interaction.user.id, interaction.message.id)
+      const giveawayData = await enterGiveaway(interaction.user.id, interaction.message.id);
+
+      if (giveawayData === "notFound") {
+        await interaction.reply({ content: 'This giveaway does not exist, Sorry!', ephemeral: true });
+      } else if (giveawayData === "alreadyEntered") {
+        await interaction.reply({ content: 'You have already entered this giveaway!', ephemeral: true });
+      } else if (giveawayData === "entered") {
+        await interaction.reply({ content: 'You have successfully entered the giveaway!', ephemeral: true });
       }
     }
   }
@@ -2099,17 +2100,544 @@ client.on('emojiUpdate', async (oldEmoji, newEmoji) => {
   logChannel.send({ embeds: [embed] });
 });
 
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+  const guild = newMember.guild;
+  const guildId = guild.id;
+  const guildSettings = await getGuildSettings(guildId);
+
+  if (!guildSettings) {
+    const errorId = uuidv4();
+    const channelError = new EmbedBuilder()
+      .setColor(botColours.red)
+      .setTitle("Error")
+      .setDescription(
+        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
+      )
+      .setTimestamp();
+
+    const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
+    fs.appendFile('errorLog.txt', errorMessage, (err) => {
+      if (err) throw err;
+    });
+
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle("Link")
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+    const firstChannel = guild.channels.cache
+      .filter(
+        (c) =>
+          c.type === ChannelType.GuildText &&
+          c.permissionsFor(guild.members.me).has("SendMessages")
+      )
+      .sort((a, b) => a.position - b.position)
+      .first();
+
+    if (firstChannel) {
+      await firstChannel.send({
+        embeds: [channelError],
+        components: [supportServer],
+      });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
+    }
+  }
+
+  if (!guildSettings.modules.logging.enabled) return;
+
+  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+  const logChannel = guild.channels.cache.get(
+    guildSettings.modules.logging.loggingChannels.serverChanges
+  );
+
+  if (!logChannel) return;
+
+  let fields = [];
+
+  if (oldMember.nickname !== newMember.nickname) {
+    fields.push(
+      {
+        name: "Nickname:",
+        value: `${oldMember.nickname ? oldMember.nickname : "None"} -> ${newMember.nickname ? newMember.nickname : "None"}`
+      }
+    );
+  }
+
+  if (oldMember.roles.cache.size !== newMember.roles.cache.size) {
+    let addedRoles = newMember.roles.cache.filter(role => !oldMember.roles.cache.has(role.id));
+    let removedRoles = oldMember.roles.cache.filter(role => !newMember.roles.cache.has(role.id));
+
+    if (addedRoles.size > 0) {
+      fields.push(
+        {
+          name: "Added Roles:",
+          value: addedRoles.map(role => role.name).join(", ")
+        }
+      );
+    }
+
+    if (removedRoles.size > 0) {
+      fields.push(
+        {
+          name: "Removed Roles:",
+          value: removedRoles.map(role => role.name).join(", ")
+        }
+      );
+    }
+  }
+
+  if (oldMember.premiumSinceTimestamp !== newMember.premiumSinceTimestamp) {
+    fields.push(
+      {
+        name: "Boosting:",
+        value: `${oldMember.premiumSinceTimestamp ? "Boosting" : "Not Boosting"} -> ${newMember.premiumSinceTimestamp ? "Boosting" : "Not Boosting"}`
+      }
+    );
+  }
+
+  if (oldMember.username !== newMember.username) {
+    fields.push(
+      {
+        name: "Username:",
+        value: `${oldMember.username} -> ${newMember.username}`
+      }
+    );
+  }
+
+  if (oldMember.nickname !== newMember.nickname) {
+    fields.push(
+      {
+        name: "Nickname:",
+        value: `${oldMember.nickname ? oldMember.nickname : "None"} -> ${newMember.nickname ? newMember.nickname : "None"}`
+      }
+    );
+  }
+
+  if (oldMember.avatar !== newMember.avatar) {
+    fields.push(
+      {
+        name: "Avatar:",
+        value: `[Old Profile](${oldMember.avatarURL}) -> [New Profile](${newMember.avatarURL})`
+      }
+    );
+  };
 
 
 
-client.once(Events.ClientReady, (c) => {
+  const embed = new EmbedBuilder()
+    .setColor(botColours.amber)
+    .setTitle("Member Updated")
+    .setDescription(`${newMember.user.tag} (${newMember.id}) was updated.`)
+    .addFields(fields)
+    .setTimestamp();
+
+  logChannel.send({ embeds: [embed] });
+});
+
+
+client.once('ready', async () => {
+
   const status = client.user.setActivity({
     type: ActivityType.Custom,
     name: "customstatus",
     state: "Join the beta program!",
   });
 
-  console.log(`Ready! Logged in as ${c.user.tag}`);
+  console.log(`Ready! Logged in as ${client.user.tag}`);
+
+  // Fetch all active giveaways from the database
+  const activeGiveaways = await getAllGiveaways();
+
+  if (activeGiveaways.length === 0) return;
+
+  // Schedule a task for each active giveaway
+  for (const giveaway of activeGiveaways) {
+    scheduleGiveawayEnd(giveaway, client);
+  }
 });
 
 client.login(process.env.TOKEN);
+
+//EXPRESS SERVER---------------------------------------------------------------------
+
+const cors = require('cors');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const winston = require('winston');
+const morgan = require('morgan');
+
+const app = express();
+const PORT = 3000;
+
+
+// Use cors middleware with specific origin
+app.use(cors({
+  origin: function (origin, callback) {
+    if (origin === 'https://scoutbot.xyz') {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true, // If you're using credentials (e.g., cookies)
+  methods: ['GET', 'POST'], // Add other methods as needed
+  allowedHeaders: ['Authorization', 'Content-Type'],
+}));
+
+// Use session middleware with secure, httpOnly, and sameSite cookies
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    secure: true, // Use secure cookies in production (HTTPS)
+    domain: 'scoutbot.xyz', // Set the Domain attribute to the parent domain
+    httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
+    sameSite: 'strict', // Only send cookies in requests that originate from the same site
+    maxAge: 600000
+  }
+}));
+
+
+app.set('trust proxy', 1);
+app.use(cookieParser());
+app.use(express.json());
+app.use(helmet());
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:"],
+    connectSrc: ["'self'"],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    mediaSrc: ["'self'"],
+    frameSrc: ["'none'"],
+  }
+}));
+
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+}));
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
+// OAuth2 callback endpoint
+app.post('/oauth/callback', async (req, res) => {
+  try {
+    console.log('Received OAuth callback')
+    const { oauth2state, code } = req.body;
+
+    if (oauth2state !== req.cookies.oauth2state) {
+      console.log('Invalid state')
+      return res.status(403).json({ error: 'Invalid state' });
+    }
+
+    // Exchange authorization code for access token
+    const tokenResponse = await axios.post(
+      `https://discordapp.com/api/oauth2/token`,
+      `client_id=${process.env.SCOUT_CLIENT_ID}&client_secret=${process.env.SCOUT_CLIENT_SECRET}&grant_type=authorization_code&code=${code}&redirect_uri=${process.env.REDIRECT_URI}&scope=identify%20email%20guilds`
+    );
+
+    // Fetch user's data from Discord using the access token
+    const access_token = tokenResponse.data.access_token;
+
+
+    const userResponse = await axios.get('https://discord.com/api/users/@me', {
+      headers: {
+        authorization: `Bearer ${access_token}`,
+      },
+    });
+
+
+    // Fetch user's guilds from Discord using the access token
+    const guildsResponse = await axios.get('https://discord.com/api/users/@me/guilds', {
+      headers: {
+        authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    console.log(userResponse.data.id)
+
+    const blacklistStatus = await isUserBlacklisted(userResponse.data.id)
+
+    console.log('Blacklist status:', blacklistStatus);
+
+    if (blacklistStatus) {
+      return res.status(403).json({ message: "User attempting to authenticate is blacklisted", data: blacklistStatus });
+    }
+
+
+    // Generate a random key
+    const dataKey = crypto.randomBytes(64).toString('hex');
+
+    const payload = {
+      dataKey: dataKey,
+    };
+
+    // Generate a JWT
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    // Store user data in MongoDB
+    const userEntry = {
+      dataKey: dataKey, // Store the random key to verify the user later
+      access_token: access_token, // Store the access token to make requests to Discord API
+      userData: userResponse.data,
+      guilds: guildsResponse.data,
+      lastUpdated: Date.now(),
+      token: token, // Store the JWT
+    };
+
+    await oauthCallbackData(userEntry)
+
+    // Return the access token, the random key, and the JWT to the client
+
+    // Set the token and dataKey in the session data
+    req.session.dataKey = dataKey;
+    req.session.token = token;
+
+    console.log('Saved session:', req.session); // Add this line
+    // Return the access token, the random key, and the JWT to the client
+    console.log('Authentication successful');
+    res.json({ message: 'Authentication successful' });
+
+  } catch (error) {
+    if (error.response) {
+      console.error('OAuth callback error:', error.response.data);
+      res.status(error.response.status).json({ error: error.response.data });
+    } else if (error.request) {
+      console.error('No response was received', error.request);
+      res.status(500).json({ error: 'No response was received' });
+    } else {
+      console.error('Request configuration error', error.message);
+      res.status(500).json({ error: 'Request configuration error' });
+    }
+  }
+});
+
+async function authenticateToken(req, res, next) {
+  const dataKey = req.session.dataKey;
+  const token = req.session.token;
+
+  console.log('Received request authenticate token');
+
+  if (!dataKey) {
+    console.log('No dataKey in session');
+    return res.sendStatus(403);
+  }
+
+  if (dataKey) {
+    // Fetch the user entry from the database using the dataKey
+    const userEntry = await fetchUserData(dataKey); // Use await here
+
+    if (!userEntry || userEntry.token !== token) {
+      console.log('No user entry or token mismatch');
+      return res.sendStatus(404);
+    }
+
+  }
+
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        console.log('JWT verify error:', err);
+        return res.sendStatus(403);
+      }
+      req.user = user;
+      next();
+    });
+  } catch (err) {
+    console.log('Malformed JWT:', err);
+    return res.sendStatus(400); // Return a 400 Bad Request status if the JWT is malformed
+  }
+}
+
+
+app.get('/oauth/authorize', (req, res) => {
+  console.log('Received request for state value');
+  const state = crypto.randomBytes(16).toString('hex'); // Generate a new state value
+
+  // Construct the authorization URL
+  const params = new URLSearchParams({
+    client_id: process.env.SCOUT_CLIENT_ID,
+    redirect_uri: process.env.REDIRECT_URI,
+    response_type: 'code',
+    scope: 'identify email guilds',
+    state: state
+  });
+  const authUrl = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
+
+  // Send the authorization URL to the frontend
+  res.cookie('oauth2state', state, { domain: '.scoutbot.xyz', httpOnly: true, sameSite: 'lax' });
+  res.json({ authUrl: authUrl });
+});
+
+
+// Get user's data from MongoDB
+app.get('/userdata', authenticateToken, async (req, res) => {
+  try {
+
+    console.log('Received request to get user data');
+
+    const dataKey = req.session.dataKey;
+
+    const userData = await fetchUserData(dataKey)
+
+    if (!userData) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(userData);
+
+  } catch (error) {
+    console.error('Error getting user data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+app.get('/bot/guilds', authenticateToken, async (req, res) => {
+  try {
+    console.log('Received request to get bot guilds')
+
+    let guildIds = req.query.guildIds; // Access the guild IDs from the query parameters
+
+    // Convert guildIds to an array if it's not already
+    if (!Array.isArray(guildIds)) {
+      guildIds = [guildIds];
+    }
+
+    // Convert guildIds to Long instances
+    const longGuildIds = guildIds.map(id => Long.fromString(id));
+
+    const guilds = await getBotGuilds(longGuildIds);
+    // Create a map of guildIDs to existence
+    const existsMap = {};
+
+    guildIds.forEach(id => {
+      existsMap[id] = guilds.some(guild => guild._id.toString() === id);
+    });
+
+    res.json(existsMap);
+  } catch (error) {
+    console.error('Error getting guilds:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/guildsettings', authenticateToken, async (req, res) => {
+  try {
+    console.log('Received request to get guild settings');
+    const guildId = req.query.guildId;
+
+    const guildSettings = await getGuildSettings(guildId);
+
+    if (!guildSettings) {
+      return res.status(404).json({ error: 'Guild not found' });
+    }
+
+    res.json(guildSettings);
+  } catch (error) {
+    console.error('Error getting guild settings:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/guild/useraccess', authenticateToken, async (req, res) => {
+  try {
+    console.log('Received request to get user access to guild');
+    const { guildId } = req.query; // Use req.query instead of req.params
+    const dataKey = req.session.dataKey;
+
+    console.log(guildId, dataKey)
+
+    const userAccess = await getUserAccessToGuild(guildId, dataKey);
+    console.log('User Access:', userAccess); // Log the userAccess
+
+    res.json(userAccess);
+  } catch (error) {
+    console.error('Error getting user access to guild:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/guildsettings/module/enabled/update', authenticateToken, async (req, res) => {
+  try {
+    const { guildId, module, enabled } = req.body;
+
+    const result = await updateGuildModuleSettings(guildId, module, enabled);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating guild settings:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/guildsettings/serversettings/update', authenticateToken, async (req, res) => {
+  try {
+    const { guildId, setting, value } = req.body;
+
+    // Call the updateServerSettings function
+    const result = await updateServerSettings(guildId, setting, value);
+
+    // Send a success response
+    res.json({ success: true, message: 'Settings updated successfully', data: result });
+  } catch (error) {
+    // Send an error response
+    res.status(500).json({ success: false, message: 'An error occurred while updating settings', error: error.message });
+  }
+});
+
+app.post('/oauth/logout', authenticateToken, async (req, res) => {
+  try {
+    console.log('Received request to logout');
+    const dataKey = req.session.dataKey;
+
+    const result = await logoutUser(dataKey);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error logging out:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.get('/bot/blacklists', authenticateToken, async (req, res) => {
+  try {
+    console.log('Received request to get blacklists');
+    const blacklists = await getBlacklists();
+
+    res.json(blacklists);
+  } catch (error) {
+    console.error('Error getting blacklists:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+}); 

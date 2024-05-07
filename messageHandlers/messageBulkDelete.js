@@ -76,56 +76,46 @@ async function handleBulkMessageDelete(messages, client) {
 
     if (!loggingChannel) return;
 
-    let deletedMessages = "";
+
+    let deletedMessages = '';
     let embeds = [];
+    let currentEmbed = new EmbedBuilder()
+        .setColor(botColours.red)
+        .setTitle("Messages Purged");
 
-    messages.forEach((message) => {
-        let tempMessage = `${message.author.username} (${message.author.id}) - ${message.content}\n`;
+    let messageCount = 0;
 
-        // If the message has any attachments, add them to the message
-        if (message.attachments.size > 0) {
-            message.attachments.each(attachment => {
-                tempMessage += `[Click Here](${attachment.url})\n`;
-            });
-        }
+    messages.forEach((message, index) => {
+        const tempMessage = `${message.author.tag} (${message.author.id}): ${message.content}\n`;
 
-        if (deletedMessages.length + tempMessage.length > 2048) {
-            embeds.push(
-                new EmbedBuilder()
-                    .setColor(botColours.red)
-                    .setTitle("Messages Purged")
-                    .setDescription(deletedMessages)
-                    .addFields(
-                        {
-                            name: "Channel:",
-                            value: `${message.channel.name} (${message.channel.id})`,
-                        },
-                        { name: "Message Count:", value: `${messages.size}` } // convert number to string
-                    )
-                    .setTimestamp()
-            );
+        // If the current embed has 20 messages, create a new embed
+        if (messageCount >= 20) {
+            embeds.push(currentEmbed);
 
-            deletedMessages = tempMessage; // start new string for next embed
+            deletedMessages = tempMessage;
+            messageCount = 1; // Reset message count for the new embed
+
+            currentEmbed = new EmbedBuilder()
+                .setColor(botColours.red)
+                .setTitle("Messages Purged");
         } else {
             deletedMessages += tempMessage;
+            messageCount++;
         }
+
+        // Add the messages to the current embed
+        currentEmbed.setDescription(deletedMessages);
     });
 
-    // add remaining messages to final embed
-    embeds.push(
-        new EmbedBuilder()
-            .setColor(botColours.red)
-            .setTitle("Messages Purged")
-            .setDescription(deletedMessages)
-            .addFields(
-                {
-                    name: "Channel:",
-                    value: `<#${messages.first().channel.id}> (${messages.first().channel.id})`,
-                },
-                { name: "Message Count:", value: `${messages.size}` } // convert number to string
-            )
-            .setTimestamp()
+    // Add the info to the last embed
+    currentEmbed.addFields(
+        {
+            name: "Channel:",
+            value: `<#${messages.first().channel.id}> (${messages.first().channel.id})`,
+        },
+        { name: "Message Count:", value: `${messages.size}` } // convert number to string
     );
+    embeds.push(currentEmbed);
 
     // get the channel from the mapping
     const channel = client.channels.cache.get(loggingChannel.id);
@@ -137,6 +127,7 @@ async function handleBulkMessageDelete(messages, client) {
         // send all embeds
         embeds.forEach((embed) => channel.send({ embeds: [embed] }));
     }
+
 }
 
 module.exports = { handleBulkMessageDelete };
