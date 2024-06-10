@@ -152,6 +152,11 @@ async function wipeGuildSettings(guildId) {
 
 
 async function getGuildSettings(guildId) {
+  if (!guildId) {
+    console.error('Error: guildId is undefined');
+    return;
+  }
+
   const longGuildId = Long.fromString(guildId);
   return await db.collection('botSettings').findOne({ _id: longGuildId });
 }
@@ -441,7 +446,6 @@ async function getUserAccessToGuild(guildId, dataKey) {
   } else {
     role = 'None';
   }
-  console.log(role);
   return { role };
 }
 
@@ -515,6 +519,58 @@ async function getBlacklists() {
   return blacklists;
 }
 
+async function getTicketInfo(ticketId) {
+  try{
+  const data = await db.collection('supportTickets').findOne({ _id: Long.fromString(ticketId) });
+  return data;
+  } catch {
+    return null;
+  }
+}
+
+async function staffOauthCallbackData(userEntry) {
+
+  const collection = client.db('websiteData').collection("staffUserData");
+
+  // Update or insert user data in MongoDB
+  await collection.updateOne(
+    { "userData.id": userEntry.userData.id }, // Filter by user ID
+    { $set: userEntry }, // Update or set the user data
+    { upsert: true } // Create a new document if no documents match the filter
+  );
+}
+
+async function fetchStaffUserData(dataKey) {
+
+  const collection = client.db('websiteData').collection("staffUserData");
+
+  const userData = await collection.findOne({ dataKey });
+
+  
+  if (!userData) {
+    return null;
+  } else {
+    return userData;
+  }
+
+}
+
+async function saveMetricsData(data) {
+  const collection = db.collection("metricsData");
+  await collection.insertOne(data);
+}
+
+async function closeDatabaseConnection() {
+  if (client) {
+    try {
+      await client.close();
+      console.log('Disconnected from MongoDB for shutdown');
+    } catch (error) {
+      console.error('Error disconnecting from MongoDB:', error);
+      throw error;
+    }
+  }
+}
 
 module.exports = {
   connectToDatabase,
@@ -545,6 +601,11 @@ module.exports = {
   getUserAccessToGuild,
   logoutUser,
   isModuleEnabled,
-  updateServerSettings
+  updateServerSettings,
+  getTicketInfo,
+  staffOauthCallbackData,
+  fetchStaffUserData,
+  saveMetricsData,
+  closeDatabaseConnection
 
 }

@@ -8,7 +8,6 @@ async function handleBulkMessageDelete(messages, client) {
 
 
     if (messages.size === 0) {
-        console.error('No messages found');
         return;
     }
 

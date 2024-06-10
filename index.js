@@ -1,8 +1,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { Client, Collection, Events, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ChannelType,
-  StringSelectMenuBuilder, StringSelectMenuOptionBuilder, SelectMenuBuilder, PermissionsBitField, ActivityType, IntegrationExpireBehavior, ApplicationCommandOptionWithChoicesAndAutocompleteMixin, SlashCommandStringOption, } = require("discord.js");
-const { connectToDatabase, setupServerdata, wipeGuildSettings, getGuildSettings, enterGiveaway, logoutUser, getAllGiveaways, isUserBlacklisted, oauthCallbackData, fetchUserData, getBotGuilds, updateGuildModuleSettings, getUserAccessToGuild, isModuleEnabled, updateServerSettings } = require("./database");
+  StringSelectMenuBuilder, StringSelectMenuOptionBuilder, SelectMenuBuilder, PermissionsBitField, ButtonStyle, ActivityType, IntegrationExpireBehavior, ApplicationCommandOptionWithChoicesAndAutocompleteMixin, SlashCommandStringOption, } = require("discord.js");
+const { connectToDatabase, setupServerdata, wipeGuildSettings, getGuildSettings, enterGiveaway, logoutUser, getAllGiveaways, isUserBlacklisted, oauthCallbackData, fetchUserData, getBotGuilds, updateGuildModuleSettings, getUserAccessToGuild, isModuleEnabled, updateServerSettings, getTicketInfo, staffOauthCallbackData, fetchStaffUserData, saveMetricsData, closeDatabaseConnection } = require("./database");
 const { scheduleGiveawayEnd } = require('./giveawaySystem/verdictHandling.js');
 const { handleBulkMessageDelete } = require("./messageHandlers/messageBulkDelete.js");
 const { handleExperienceGain } = require("./leveingSystem/handleLeveling.js");
@@ -10,6 +10,7 @@ const dotenv = require("dotenv");
 const { v4: uuidv4 } = require("uuid");
 const botColours = require('./botColours.json')
 const express = require('express');
+const cron = require('node-cron');
 const axios = require('axios');
 const { MongoClient, Long, ServerApiVersion, ConnectionPoolReadyEvent } = require('mongodb');
 dotenv.config();
@@ -23,12 +24,21 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildEmojisAndStickers
+    GatewayIntentBits.GuildEmojisAndStickers,
+    GatewayIntentBits.GuildPresences,
   ],
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
 
-
+let metrics = {
+  guildCount: 0,
+  userCount: 0,
+  commandsRun: 0,
+  messagesSent: 0,
+  uptime: 0,
+  errors: 0,
+  latency: 0,
+};
 
 connectToDatabase()
   .then(() => {
@@ -60,6 +70,9 @@ for (const folder of commandFolders) {
     command.moduleName = folder;
 
     if ("data" in command && "execute" in command) {
+      // Add the category to the command's data
+      command.data.category = folder;
+
       client.commands.set(command.data.name, command);
     } else {
       console.log(
@@ -74,38 +87,9 @@ for (const folder of commandFolders) {
 //Events
 
 client.on("interactionCreate", async (interaction) => {
-  // Check if the user is blacklisted
-  const userId = interaction.user.id;
-  const blacklistedUser = await isUserBlacklisted(userId);
-
-  if (blacklistedUser) {
-    const blacklistedEmbed = new EmbedBuilder()
-      .setColor(botColours.red)
-      .setTitle(`You have been blacklisted from Scout.`)
-      .addFields(
-        { name: "Reason:", value: blacklistedUser.reason },
-        { name: "Timestamp:", value: new Date(blacklistedUser.timestamp * 1000).toUTCString() }
-      )
-      .setTimestamp()
-      .setFooter({
-        text: `To appeal, please join our Support Server and create a ticket`,
-      });
-
-    const supportServerButton = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel("Support Server")
-        .setStyle("Link")
-        .setURL("https://discord.gg/BwD7MgVMuq")
-    );
-
-    return interaction.reply({
-      embeds: [blacklistedEmbed],
-      components: [supportServerButton],
-    });
-  }
-
 
   if (interaction.isCommand()) {
+    metrics.commandsRun++;
     const command = interaction.client.commands.get(interaction.commandName);
 
     if (!command) {
@@ -163,6 +147,7 @@ client.on("interactionCreate", async (interaction) => {
         try {
           await command.execute(interaction);
         } catch (error) {
+          metrics.errors++;
           console.error(error);
           if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
@@ -209,6 +194,7 @@ client.on("interactionCreate", async (interaction) => {
         try {
           await command.execute(interaction);
         } catch (error) {
+          metrics.errors++;
           console.error(error);
           if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
@@ -259,6 +245,7 @@ client.on("interactionCreate", async (interaction) => {
     } catch (error) {
       console.error(error);
       if (interaction.replied || interaction.deferred) {
+        metrics.errors++;
         await interaction.followUp({
           content: "There was an error while executing this command!",
           ephemeral: true,
@@ -288,6 +275,7 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.on("messageCreate", async (message) => {
+  metrics.messagesSent++;
   handleExperienceGain(message);
 });
 
@@ -297,6 +285,9 @@ client.on("messageDeleteBulk", async (messages) => {
 });
 
 client.on("guildCreate", async (guild) => {
+
+  metrics.guildCount++;
+  metrics.userCount += guild.memberCount;
 
   const isUserBlacklisted = await isUserBlacklisted(guild.ownerId);
 
@@ -385,6 +376,11 @@ client.on("guildCreate", async (guild) => {
   }
 
   setupServerdata(guildid);
+});
+
+client.on('guildDelete', guild => {
+  metrics.guildCount--;
+  metrics.userCount -= guild.memberCount;
 });
 
 client.on("messageDelete", async (message) => {
@@ -1730,30 +1726,89 @@ client.on('channelDelete', async (channel) => {
 });
 
 client.on('guildBanAdd', async (guild, user) => {
-  const guildId = guild.id;
-  const guildSettings = await getGuildSettings(guildId);
+  try {
+    const guildId = guild.id;
 
-  if (!guildSettings) {
-    const errorId = uuidv4();
-    const channelError = new EmbedBuilder()
+    console.log(guild.id)
+    const guildSettings = await getGuildSettings(guildId);
+
+    if (!guildSettings) {
+      const errorId = uuidv4();
+      const errorEmbed = new EmbedBuilder()
+        .setColor(botColours.red)
+        .setTitle("Error")
+        .setDescription(
+          `The guild settings could not be found for ${guild.name} (\`${guild.id}\`).\n\nPlease contact support with the following error ID:\n\`${errorId}\``
+        )
+        .setTimestamp();
+
+      const errorMessage = `Error ID: ${errorId}, Error Details: Guild settings not found for guild ID ${guild.id}\n`;
+      fs.appendFile('errorLog.txt', errorMessage, (err) => {
+        if (err) throw err;
+      });
+
+      const supportServer = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel("Support Server")
+          .setStyle(ButtonStyle.Link)
+          .setURL("https://discord.gg/BwD7MgVMuq")
+      );
+
+      const firstChannel = guild.channels.cache
+        .filter(
+          (c) =>
+            c.type === ChannelType.GuildText &&
+            c.permissionsFor(guild.members.me).has("SendMessages")
+        )
+        .sort((a, b) => a.position - b.position)
+        .first();
+
+      if (firstChannel) {
+        await firstChannel.send({
+          embeds: [errorEmbed],
+          components: [supportServer],
+        });
+      } else {
+        console.log(
+          "Channels in the guild:",
+          guild.channels.cache.map(
+            (channel) => `${channel.name} (${channel.type})`
+          )
+        );
+        console.log(
+          `No suitable channel found to send message in guild ${guild.id}`
+        );
+      }
+      return;
+    }
+
+    if (!guildSettings.modules.logging.enabled) return;
+
+    if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+    const logChannel = guild.channels.cache.get(
+      guildSettings.modules.logging.loggingChannels.serverChanges
+    );
+
+    if (!logChannel) return;
+
+    const embed = new EmbedBuilder()
       .setColor(botColours.red)
-      .setTitle("Error")
-      .setDescription(
-        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
-      )
+      .setTitle("User Banned")
+      .setDescription(`${user.tag} (${user.id}) was banned.`)
       .setTimestamp();
 
+    logChannel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error("Error in guildBanAdd event:", error);
+
+    const errorId = uuidv4();
     const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
     fs.appendFile('errorLog.txt', errorMessage, (err) => {
       if (err) throw err;
     });
 
-    const supportServer = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel("Support Server")
-        .setStyle("Link")
-        .setURL("https://discord.gg/BwD7MgVMuq")
-    );
+    // Sending error information to a designated channel (optional)
     const firstChannel = guild.channels.cache
       .filter(
         (c) =>
@@ -1764,68 +1819,111 @@ client.on('guildBanAdd', async (guild, user) => {
       .first();
 
     if (firstChannel) {
+      const errorEmbed = new EmbedBuilder()
+        .setColor(botColours.red)
+        .setTitle("Error")
+        .setDescription(
+          `An error occurred while processing the ban for ${user.tag}.\n\nPlease contact support with the following error ID:\n\`${errorId}\``
+        )
+        .setTimestamp();
+
+      const supportServer = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel("Support Server")
+          .setStyle(ButtonStyle.Link)
+          .setURL("https://discord.gg/BwD7MgVMuq")
+      );
+
       await firstChannel.send({
-        embeds: [channelError],
+        embeds: [errorEmbed],
         components: [supportServer],
       });
-    } else {
-      console.log(
-        "Channels in the guild:",
-        guild.channels.cache.map(
-          (channel) => `${channel.name} (${channel.type})`
-        )
-      );
-      console.log(
-        `No suitable channel found to send message in guild ${guild.id}`
-      );
     }
   }
-
-  if (!guildSettings.modules.logging.enabled) return;
-
-  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
-
-  const logChannel = guild.channels.cache.get(
-    guildSettings.modules.logging.loggingChannels.serverChanges
-  );
-
-  if (!logChannel) return;
-
-  const embed = new EmbedBuilder()
-    .setColor(botColours.red)
-    .setTitle("User Banned")
-    .setDescription(`${user.tag} (${user.id}) was banned.`)
-    .setTimestamp();
-
-  logChannel.send({ embeds: [embed] });
 });
 
 client.on('guildBanRemove', async (guild, user) => {
+  try {
+    const guildId = guild.id;
+    const guildSettings = await getGuildSettings(guildId);
 
-  const guildId = guild.id;
-  const guildSettings = await getGuildSettings(guildId);
+    if (!guildSettings) {
+      const errorId = uuidv4();
+      const errorEmbed = new EmbedBuilder()
+        .setColor(botColours.red)
+        .setTitle("Error")
+        .setDescription(
+          `The guild settings could not be found for ${guild.name} (\`${guild.id}\`).\n\nPlease contact support with the following error ID:\n\`${errorId}\``
+        )
+        .setTimestamp();
 
-  if (!guildSettings) {
-    const errorId = uuidv4();
-    const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
-      .setTitle("Error")
-      .setDescription(
-        `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
-      )
+      const errorMessage = `Error ID: ${errorId}, Error Details: Guild settings not found for guild ID ${guild.id}\n`;
+      fs.appendFile('errorLog.txt', errorMessage, (err) => {
+        if (err) throw err;
+      });
+
+      const supportServer = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel("Support Server")
+          .setStyle(ButtonStyle.Link)
+          .setURL("https://discord.gg/BwD7MgVMuq")
+      );
+
+      const firstChannel = guild.channels.cache
+        .filter(
+          (c) =>
+            c.type === ChannelType.GuildText &&
+            c.permissionsFor(guild.members.me).has("SendMessages")
+        )
+        .sort((a, b) => a.position - b.position)
+        .first();
+
+      if (firstChannel) {
+        await firstChannel.send({
+          embeds: [errorEmbed],
+          components: [supportServer],
+        });
+      } else {
+        console.log(
+          "Channels in the guild:",
+          guild.channels.cache.map(
+            (channel) => `${channel.name} (${channel.type})`
+          )
+        );
+        console.log(
+          `No suitable channel found to send message in guild ${guild.id}`
+        );
+      }
+      return;
+    }
+
+    if (!guildSettings.modules.logging.enabled) return;
+
+    if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
+
+    const logChannel = guild.channels.cache.get(
+      guildSettings.modules.logging.loggingChannels.serverChanges
+    );
+
+    if (!logChannel) return;
+
+    const embed = new EmbedBuilder()
+      .setColor(botColours.green)
+      .setTitle("User Unbanned")
+      .setDescription(`${user.tag} (${user.id}) was unbanned.`)
       .setTimestamp();
 
+    logChannel.send({ embeds: [embed] });
+  } catch (error) {
+    console.error("Error in guildBanRemove event:", error);
+
+    const errorId = uuidv4();
     const errorMessage = `Error ID: ${errorId}, Error Details: ${error.stack}\n`;
     fs.appendFile('errorLog.txt', errorMessage, (err) => {
       if (err) throw err;
     });
 
-    const supportServer = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel("Support Server")
-        .setStyle("Link")
-        .setURL("https://discord.gg/BwD7MgVMuq")
-    );
+    // Sending error information to a designated channel (optional)
     const firstChannel = guild.channels.cache
       .filter(
         (c) =>
@@ -1836,40 +1934,27 @@ client.on('guildBanRemove', async (guild, user) => {
       .first();
 
     if (firstChannel) {
+      const errorEmbed = new EmbedBuilder()
+        .setColor(botColours.red)
+        .setTitle("Error")
+        .setDescription(
+          `An error occurred while processing the unban for ${user.tag}.\n\nPlease contact support with the following error ID:\n\`${errorId}\``
+        )
+        .setTimestamp();
+
+      const supportServer = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel("Support Server")
+          .setStyle(ButtonStyle.Link)
+          .setURL("https://discord.gg/BwD7MgVMuq")
+      );
+
       await firstChannel.send({
-        embeds: [channelError],
+        embeds: [errorEmbed],
         components: [supportServer],
       });
-    } else {
-      console.log(
-        "Channels in the guild:",
-        guild.channels.cache.map(
-          (channel) => `${channel.name} (${channel.type})`
-        )
-      );
-      console.log(
-        `No suitable channel found to send message in guild ${guild.id}`
-      );
     }
   }
-
-  if (!guildSettings.modules.logging.enabled) return;
-
-  if (!guildSettings.modules.logging.loggingChannels.serverChanges) return;
-
-  const logChannel = guild.channels.cache.get(
-    guildSettings.modules.logging.loggingChannels.serverChanges
-  );
-
-  if (!logChannel) return;
-
-  const embed = new EmbedBuilder()
-    .setColor(botColours.green)
-    .setTitle("User Unbanned")
-    .setDescription(`${user.tag} (${user.id}) was unbanned.`)
-    .setTimestamp();
-
-  logChannel.send({ embeds: [embed] });
 });
 
 client.on('emojiCreate', async (emoji) => {
@@ -2245,6 +2330,52 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
   logChannel.send({ embeds: [embed] });
 });
 
+setInterval(() => {
+  metrics.uptime = client.uptime;
+}, 1000);
+
+cron.schedule('* * * * *', async () => {
+  try {
+    const metricsData = {
+      ...metrics,
+      timestamp: new Date()
+    };
+    await saveMetricsData(metricsData);
+    console.log('Metrics saved:', metricsData);
+  } catch (error) {
+    console.error('Error saving metrics:', error);
+  }
+});
+
+async function saveMetricsAndExit() {
+  try {
+    const metricsData = {
+      ...metrics,
+      timestamp: new Date()
+    };
+    saveMetricsData(metricsData);
+    console.log('Metrics have been saved on shutdown');
+  } catch (error) {
+    console.error('Error saving metrics on shutdown:', error);
+  } finally {
+    process.exit(0);
+  }
+}
+
+async function handleExit() {
+  try {
+    await saveMetricsAndExit();
+    await closeDatabaseConnection();
+  } catch (error) {
+    console.error('Error during exit:', error);
+  } finally {
+    process.exit(0); // Ensure the process exits after tasks are complete
+  }
+}
+
+process.on('SIGINT', handleExit);
+process.on('SIGTERM', handleExit);
+
 
 client.once('ready', async () => {
 
@@ -2253,6 +2384,10 @@ client.once('ready', async () => {
     name: "customstatus",
     state: "Join the beta program!",
   });
+
+  metrics.guildCount = client.guilds.cache.size;
+  metrics.userCount = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
+  metrics.latency = client.ws.ping;
 
   console.log(`Ready! Logged in as ${client.user.tag}`);
 
@@ -2267,10 +2402,10 @@ client.once('ready', async () => {
   }
 });
 
+
 client.login(process.env.TOKEN);
 
 //EXPRESS SERVER---------------------------------------------------------------------
-
 const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
@@ -2284,20 +2419,21 @@ const morgan = require('morgan');
 const app = express();
 const PORT = 3000;
 
-
 // Use cors middleware with specific origin
-app.use(cors({
-  origin: function (origin, callback) {
-    if (origin === 'https://scoutbot.xyz') {
-      callback(null, true)
-    } else {
-      callback(new Error('Not allowed by CORS'))
-    }
-  },
-  credentials: true, // If you're using credentials (e.g., cookies)
-  methods: ['GET', 'POST'], // Add other methods as needed
+const corsOptions = {
+  origin: ['https://scoutbot.xyz', 'https://staff.scoutbot.xyz'],
+  credentials: true, // Allow cookies to be sent across domains
+  methods: ['GET', 'POST'],
   allowedHeaders: ['Authorization', 'Content-Type'],
-}));
+};
+
+// Apply CORS middleware globally except for specific routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/tickets/transcript')) {
+    return next();
+  }
+  cors(corsOptions)(req, res, next);
+});
 
 // Use session middleware with secure, httpOnly, and sameSite cookies
 app.use(session({
@@ -2305,7 +2441,7 @@ app.use(session({
   resave: false,
   saveUninitialized: true,
   cookie: {
-    secure: true, // Use secure cookies in production (HTTPS)
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (HTTPS)
     domain: 'scoutbot.xyz', // Set the Domain attribute to the parent domain
     httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
     sameSite: 'strict', // Only send cookies in requests that originate from the same site
@@ -2313,6 +2449,7 @@ app.use(session({
   }
 }));
 
+app.set('view engine', 'ejs');
 
 app.set('trust proxy', 1);
 app.use(cookieParser());
@@ -2336,12 +2473,30 @@ app.use(rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
 }));
+app.use(morgan('combined')); // Ensure morgan is used for logging
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
 
-// OAuth2 callback endpoint
+// Add the /tickets/transcript/:ticketId route without CORS
+app.get('/tickets/transcript/:ticketId', async (req, res) => {
+  try {
+    const ticketId = req.params.ticketId;
+    const ticketData = await getTicketInfo(ticketId);
+
+    if (ticketData === null) {
+      return res.status(404).json({ error: '404 | Ticket Not Found' });
+    }
+
+    res.render('ticketTranscript', { ticket: ticketData });
+  } catch (error) {
+    console.error('Error fetching ticket:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 app.post('/oauth/callback', async (req, res) => {
   try {
     console.log('Received OAuth callback')
@@ -2442,16 +2597,16 @@ async function authenticateToken(req, res, next) {
 
   if (!dataKey) {
     console.log('No dataKey in session');
-    return res.sendStatus(403);
+    return res.status(403).send('No datakey found in session.');
   }
 
   if (dataKey) {
     // Fetch the user entry from the database using the dataKey
-    const userEntry = await fetchUserData(dataKey); // Use await here
+    const userEntry = await fetchStaffUserData(dataKey); // Use await here
 
     if (!userEntry || userEntry.token !== token) {
       console.log('No user entry or token mismatch');
-      return res.sendStatus(404);
+      return res.status(404).send('No user entry to token mismatch');
     }
 
   }
@@ -2461,19 +2616,19 @@ async function authenticateToken(req, res, next) {
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
       if (err) {
         console.log('JWT verify error:', err);
-        return res.sendStatus(403);
+        return res.status(500).send('Token Internal Error');
       }
       req.user = user;
       next();
     });
   } catch (err) {
     console.log('Malformed JWT:', err);
-    return res.sendStatus(400); // Return a 400 Bad Request status if the JWT is malformed
+    return res.status(500).send('Token Internal Error');
   }
 }
 
 
-app.get('/oauth/authorize', (req, res) => {
+app.get('/oauth/authorise', (req, res) => {
   console.log('Received request for state value');
   const state = crypto.randomBytes(16).toString('hex'); // Generate a new state value
 
@@ -2637,6 +2792,179 @@ app.get('/bot/blacklists', authenticateToken, async (req, res) => {
   }
 });
 
+app.get('/guild/roles', authenticateToken, async (req, res) => {
+  try {
+    console.log('Received request to get guild roles');
+    const { guildId } = req.query;
+
+    const roles = await axios.get(`https://discord.com/api/v9/guilds/${guildId}/roles`, {
+      headers: {
+        Authorization: `Bot ${process.env.TOKEN}`
+      }
+    });
+
+    // Assuming roles.data is an array
+    const sortedRoles = [...roles.data].sort((a, b) => b.position - a.position);
+
+    res.json(sortedRoles);
+  } catch (error) {
+    console.error('Error getting guild roles:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+////////////////////////// -Staff API Endpoints- ////////////////////////////////////
+
+app.get('/staff/oauth/authorise', cors(corsOptions), (req, res) => {
+  console.log('Received request for state value');
+  const state = crypto.randomBytes(16).toString('hex'); // Generate a new state value
+
+  // Construct the authorization URL
+  const params = new URLSearchParams({
+    client_id: process.env.SCOUT_CLIENT_ID,
+    redirect_uri: process.env.STAFF_REDIRECT_URI,
+    response_type: 'code',
+    scope: 'identify email guilds',
+    state: state
+  });
+  const authUrl = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
+
+  // Send the authorization URL to the frontend
+  res.cookie('oauth2state', state, { domain: 'scoutbot.xyz', httpOnly: true, sameSite: 'lax' });
+  res.json({ authUrl: authUrl });
+});
+
+app.post('/staff/oauth/callback', async (req, res) => {
+  try {
+    console.log('Received OAuth callback')
+    const { oauth2state, code } = req.body;
+
+    if (oauth2state !== req.cookies.oauth2state) {
+      console.log('Invalid state')
+      return res.status(403).json({ error: 'Invalid state' });
+    }
+
+    // Exchange authorization code for access token
+    const tokenResponse = await axios.post(
+      `https://discordapp.com/api/oauth2/token`,
+      `client_id=${process.env.SCOUT_CLIENT_ID}&client_secret=${process.env.SCOUT_CLIENT_SECRET}&grant_type=authorization_code&code=${code}&redirect_uri=${process.env.STAFF_REDIRECT_URI}&scope=identify`
+    );
+
+    // Fetch user's data from Discord using the access token
+    const access_token = tokenResponse.data.access_token;
+
+
+    const userResponse = await axios.get('https://discord.com/api/users/@me', {
+      headers: {
+        authorization: `Bearer ${access_token}`,
+      },
+    });
+
+
+    const presetRoles = {
+      'productdevelopment': ['1211232192987013140', '1211223145156182096'],
+      'publicrelations': ['1211231957384568842', '1211223145156182096'],
+      'communitysafety': ['1211231075532144660', '1211223145156182096'],
+
+      'headofproductdevelopment': ['1242468126314991616', '1242468469115715655', '1211232192987013140', '1211223145156182096'],
+      'headofpublicrelations': ['1242468238873464833', '1242468469115715655', '1211231957384568842', '1211223145156182096'],
+      'headofcommunitysafety': ['1242467891312332830', '1242468469115715655', '1211231075532144660', '1211223145156182096'],
+
+      'headofoperations': ['1211249397183283312', '1242468469115715655', '1211223145156182096'],
+      'ceo': ['736770508250546267', '1242468469115715655', '1211223145156182096']
+
+    };
+
+    const rolesData = await axios.get(`https://discord.com/api/v9/guilds/${process.env.SCOUT_SUPPORT_SERVER_ID}/members/${userResponse.data.id}`, {
+      headers: {
+        authorization: `Bot ${process.env.TOKEN}`,
+      },
+    });
+
+    // Assign the user a role based on their role IDs
+    let assignedRole = null;
+    for (const [role, roleIds] of Object.entries(presetRoles)) {
+      if (roleIds.every(roleId => rolesData.data.roles.includes(roleId))) {
+        assignedRole = role;
+        break;
+      }
+    }
+    console.log(userResponse.data.id)
+    console.log(assignedRole)
+
+
+
+
+    // Generate a random key
+    const dataKey = crypto.randomBytes(64).toString('hex');
+
+    const payload = {
+      dataKey: dataKey,
+    };
+
+    // Generate a JWT
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    // Store user data in MongoDB
+    const userEntry = {
+      dataKey: dataKey, // Store the random key to verify the user later
+      access_token: access_token, // Store the access token to make requests to Discord API
+      userData: userResponse.data,
+      assignedRole: assignedRole,
+      lastUpdated: Date.now(),
+      token: token, // Store the JWT
+    };
+
+    await staffOauthCallbackData(userEntry)
+
+    // Return the access token, the random key, and the JWT to the client
+
+    // Set the token and dataKey in the session data
+    req.session.dataKey = dataKey;
+    req.session.token = token;
+
+    console.log('Saved session:', req.session); // Add this line
+    // Return the access token, the random key, and the JWT to the client
+    console.log('Authentication successful');
+    res.json({ message: 'Authentication successful' });
+
+  } catch (error) {
+    if (error.response) {
+      console.error('OAuth callback error:', error.response.data);
+      res.status(error.response.status).json({ error: error.response.data });
+    } else if (error.request) {
+      console.error('No response was received', error.request);
+      res.status(500).json({ error: 'No response was received' });
+    } else {
+      console.error('Request configuration error', error.message);
+      res.status(500).json({ error: 'Request configuration error' });
+    }
+  }
+});
+
+app.get('/staff/userdata', authenticateToken, async (req, res) => {
+  try {
+
+    console.log('Received request to get staff user data');
+
+    const dataKey = req.session.dataKey;
+    console.log(dataKey)
+
+    const userData = await fetchStaffUserData(dataKey)
+
+    if (!userData) {
+      console.log('No User Data Found', dataKey)
+      return res.status(404).json({ error: 'User data entry not found.' });
+    }
+
+    res.json(userData);
+
+  } catch (error) {
+    console.error('Error getting user data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

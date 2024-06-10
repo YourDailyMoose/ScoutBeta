@@ -1,40 +1,61 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');  // Note: EmbedBuilder was corrected to MessageEmbed
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const botColours = require('../../botColours.json');
 
 module.exports = {
   cooldown: 10,
   data: new SlashCommandBuilder()
     .setName('userinfo')
+    .setDMPermission(false)
     .setDescription('Displays information about a user')
     .addUserOption(option => option.setName('user').setDescription('The user you want to get information about').setRequired(false)),
   async execute(interaction) {
-    const user = interaction.options.getMember('user') || interaction.member; // Fetch member if user option is not provided
-    
+    const user = interaction.options.getUser('user') || interaction.user;
+    let member;
 
-    const userInfoEmbed = new EmbedBuilder()  // Note: EmbedBuilder was corrected to MessageEmbed
-      .setTitle(`${user.user.username}'s Information`)
+    try {
+      member = await interaction.guild.members.fetch(user.id);
+    } catch (error) {
+      member = null;
+    }
+
+    const userInfoEmbed = new EmbedBuilder()
+      .setTitle(`${user.username}'s Information`)
       .setColor(botColours.primary)
-      .setThumbnail(user.user.displayAvatarURL({ dynamic: true }))
+      .setThumbnail(user.displayAvatarURL({ dynamic: true }))
       .addFields(
-        { name: 'Username:', value: user.user.username, inline: false },
-        { name: 'User ID:', value: user.id, inline: false },
-        { name: 'Is Bot:', value: user.user.bot ? 'Yes' : 'No', inline: false },
-        { name: 'Nickname:', value: user.nickname ? user.nickname : 'None', inline: false },
-        { name: 'Account Created:', value: `<t:${Math.floor(user.user.createdAt.getTime() / 1000)}:F>`, inline: false },
+        { name: 'Username', value: `${user.username}#${user.discriminator}`, inline: true },
+        { name: 'User ID', value: user.id, inline: true },
+        { name: 'Is Bot', value: user.bot ? 'Yes' : 'No', inline: true },
+        { name: 'Account Created', value: `<t:${Math.floor(user.createdAt.getTime() / 1000)}:F>`, inline: true }
+      )
+      .setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL({ dynamic: true }) })
+      .setTimestamp();
 
-        { name: 'Joined Server:', value: user.joinedAt ? `<t:${Math.floor(user.joinedAt.getTime() / 1000)}:F>` : 'Not a member', inline: false },
-        
-        { name: 'Roles:', value: user.roles ? user.roles.cache.filter(role => role.id !== user.guild.id).map(role => `<@&${role.id}>`).join(', ') : 'Not a member', inline: false },
-        {
-          name: 'Boosting Since:',
-          value: user.premiumSince
-            ? `<t:${Math.floor(user.premiumSince.getTime() / 1000)}:F>`
-            : 'Not Boosting',
-          inline: false
-        }
+    if (member) {
+      const presenceStatus = member.presence ? member.presence.status : 'offline';
+      const highestRole = member.roles.highest;
+      const rolesCount = member.roles.cache.filter(role => role.id !== interaction.guild.id).size;
 
-        // Add more fields here as you see fit.
+      userInfoEmbed.addFields(
+        { name: 'Nickname', value: member.nickname ? member.nickname : 'None', inline: true },
+        { name: 'Joined Server', value: `<t:${Math.floor(member.joinedAt.getTime() / 1000)}:F>`, inline: true },
+        { name: 'Presence Status', value: presenceStatus, inline: true },
+        { name: 'Highest Role', value: highestRole.name, inline: true },
+        { name: 'Roles Count', value: `${rolesCount}`, inline: true },
+        { name: 'Roles', value: member.roles.cache.filter(role => role.id !== interaction.guild.id).map(role => `<@&${role.id}>`).join(', ') || 'None', inline: false },
+        { name: 'Boosting Since', value: member.premiumSince ? `<t:${Math.floor(member.premiumSince.getTime() / 1000)}:F>` : 'Not Boosting', inline: true }
       );
+    } else {
+      userInfoEmbed.addFields(
+        { name: 'Nickname', value: 'Not a member', inline: true },
+        { name: 'Joined Server', value: 'Not a member', inline: true },
+        { name: 'Presence Status', value: 'offline', inline: true },
+        { name: 'Highest Role', value: 'None', inline: true },
+        { name: 'Roles Count', value: '0', inline: true },
+        { name: 'Roles', value: 'None', inline: false },
+        { name: 'Boosting Since', value: 'Not Boosting', inline: true }
+      );
+    }
 
     interaction.reply({ embeds: [userInfoEmbed] });
   },
