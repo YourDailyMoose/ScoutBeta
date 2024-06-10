@@ -27,6 +27,7 @@ jobs:
         username: ${{ secrets.SERVER_USERNAME }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
+          sudo -i
           cd /root/scout-beta
           git pull origin main
           npm install
