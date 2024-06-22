@@ -1,12 +1,12 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getGuildXpData, getUserLevel } = require('../../database');
 
-
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leaderboard')
         .setDescription('Displays the leaderboard for the server'),
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         const guildXpData = await getGuildXpData(interaction.guild.id);
         const levels = guildXpData.levels;
 

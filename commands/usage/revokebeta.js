@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 
-
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('revokebeta')

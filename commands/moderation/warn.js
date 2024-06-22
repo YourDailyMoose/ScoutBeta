@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getGuildSettings, logPunishment } = require('../../database.js');
-
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
@@ -12,6 +11,7 @@ module.exports = {
   permission: ['warnRoles', 'adminRoles', 'godRoles'],
   async execute(interaction) {
 
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     const targetMember = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason');
 

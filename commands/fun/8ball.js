@@ -1,7 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
-
-
 module.exports = {
   cooldown: 5,
   data: new SlashCommandBuilder()
@@ -12,6 +10,7 @@ module.exports = {
         .setDescription('The question you want to ask')
         .setRequired(true)),
   async execute(interaction) {
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     // List of possible responses
     const responses = [
       'Yes.',

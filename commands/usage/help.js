@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
-
 const fs = require('fs');
 const path = require('path');
 
@@ -20,6 +19,7 @@ module.exports = {
     .setName('help')
     .setDescription('Displays information about the bot.'),
   async execute(interaction) {
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     const introductionMessage = `Hello! I'm Scout, a moderation, utility and fun bot made by YourDailyMoose. I'm currently in development, so expect bugs and missing features. If you find any bugs, please report them in our Support Server.`;
 
     // Gather bot statistics
@@ -29,14 +29,14 @@ module.exports = {
 
     const helpmenu = new EmbedBuilder()
       .setTitle("**Help Menu**")
-      .setColor(guildColours.primary)
+      .setColor("ff9015")
       .setDescription(introductionMessage)
       .addFields(
         { name: 'Total Servers', value: `${totalServers}`, inline: true },
         { name: 'Total Users', value: `${totalUsers}`, inline: true },
         { name: 'Total Commands', value: `${totalCommands}`, inline: true }
       )
-      .setFooter({ text: "Scout - Created by YourDailyMoose | Contributors: Limitless4315 & 1spinnewiel", iconURL: interaction.client.user.displayAvatarURL() });
+      .setFooter({ text: "Scout - Created by YourDailyMoose", iconURL: interaction.client.user.displayAvatarURL() });
 
     const supportServer = new ActionRowBuilder()
       .addComponents(
@@ -98,7 +98,7 @@ module.exports = {
         const displayName = categoryDisplayNames[selectedCategory] || selectedCategory;
         const commandsEmbed = new EmbedBuilder()
           .setTitle(`**Commands in ${displayName}**`)
-          .setColor(guildColours.primary);
+          .setColor("ff9015");
 
         commandsInCategory.forEach(command => {
           const commandId = commandIds[command.data.name];

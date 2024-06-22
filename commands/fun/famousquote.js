@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle } = require('discord.js')
 
-
 const quotes = [
     {
         "quote": "Success is not final, failure is not fatal: It is the courage to continue that counts.",
@@ -339,6 +338,7 @@ module.exports = {
         .setName('quote')
         .setDescription('Get a famous or inspirational quote'),
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
 
         const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 

@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ChannelType, ActionRowBuilder } = require('discord.js');
-
 const { registerGiveaway } = require('../../database.js')
 
 module.exports = {
@@ -28,6 +27,7 @@ module.exports = {
                 .setRequired(true)),
 
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         const prize = interaction.options.getString('prize');
         const winners = interaction.options.getInteger('winners');
         const durationStr = interaction.options.getString('duration');

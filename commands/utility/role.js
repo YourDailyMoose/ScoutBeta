@@ -1,7 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError } = require('discord.js');
 
-
-//PERMISSIONS
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('role')
@@ -17,6 +15,7 @@ module.exports = {
                 .setRequired(true)),
     permission: ['adminRoles', 'godRoles'],
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
 
         const user = interaction.options.getMember('user');
         const role = interaction.options.getRole('role');

@@ -3,7 +3,6 @@ const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const twemoji = require('twemoji');
 const { getUserXP, getUserLevel, getUserGuildRank, getLevelXPRequirement } = require('../../database');
 
-
 registerFont('Lexend-VariableFont_wght.ttf', { family: 'Lexend' });
 
 async function createRankImage(user, xp, rank, level, nextLevelXp) {

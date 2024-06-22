@@ -1,13 +1,13 @@
 const axios = require('axios');
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
-
 module.exports = {
     cooldown: 10,
     data: new SlashCommandBuilder()
         .setName('joke')
         .setDescription('Get a random joke'),
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         try {
             const response = await axios.get('https://official-joke-api.appspot.com/jokes/random');
             const joke = response.data;

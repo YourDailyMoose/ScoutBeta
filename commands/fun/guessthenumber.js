@@ -12,6 +12,7 @@ module.exports = {
                 .setMinValue(100)
                 .setMaxValue(10000)),
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         const max = interaction.options.getInteger('max') || 100;
         let answer = Math.floor(Math.random() * max) + 1; // Random number between 1 and max
 

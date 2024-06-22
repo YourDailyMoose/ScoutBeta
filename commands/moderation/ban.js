@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-
 const { getGuildSettings, logPunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -15,6 +14,7 @@ module.exports = {
     .addStringOption(option => option.setName('delete_duration').setDescription('Duration of messages to delete (e.g., 1d, 7d)').setRequired(false)),
   permission: ['banRoles', 'adminRoles', 'godRoles'], // Adjust the permission to reflect ban permissions
   async execute(interaction) {
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     const user = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason') || 'No reason provided';
     const deleteDuration = interaction.options.getString('delete_duration') || '0d';

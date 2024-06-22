@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
-
 module.exports = {
   cooldown: 10,
   data: new SlashCommandBuilder()
@@ -9,6 +8,7 @@ module.exports = {
     .setDescription('Displays information about a user')
     .addUserOption(option => option.setName('user').setDescription('The user you want to get information about').setRequired(false)),
   async execute(interaction) {
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     const user = interaction.options.getUser('user') || interaction.user;
     let member;
 

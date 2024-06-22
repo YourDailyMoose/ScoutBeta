@@ -7,6 +7,7 @@ module.exports = {
         .setDescription('Sends a list of banned users.'),
     permission: ['adminRoles', 'godRoles', 'banRoles'],
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         try {
             const fetchBans = interaction.guild.bans.fetch();
             const bannedMembers = await fetchBans;

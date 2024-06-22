@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
-
 module.exports = {
   cooldown: 10,
 	data: new SlashCommandBuilder()
@@ -8,6 +7,7 @@ module.exports = {
     .setDMPermission(false)
 		.setDescription('Provides information about the server.'),
 	async execute(interaction) {
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
 		const guild = interaction.guild;
 
     const serverInfoEmbed = new EmbedBuilder()

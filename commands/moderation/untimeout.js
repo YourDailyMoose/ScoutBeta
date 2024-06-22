@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-
 const { getGuildSettings, logPunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -13,6 +12,7 @@ module.exports = {
     .addStringOption(option => option.setName('reason').setDescription('The reason for removing the timeout').setRequired(false)),
   permission: ['muteRoles', 'adminRoles', 'godRoles'],
   async execute(interaction) {
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     const targetMember = interaction.options.getMember('target');
     const reason = interaction.options.getString('reason') || 'No reason provided';
     const guildSettings = await getGuildSettings(interaction.guild.id);

@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-
 const axios = require('axios');
 const { v4: uuidv4 } = require("uuid");
 const fs = require('fs');
@@ -12,6 +11,7 @@ module.exports = {
   async execute(interaction) {
 
     await interaction.deferReply();
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
 
     try {
       const response = await axios.get("https://api.thecatapi.com/v1/images/search");

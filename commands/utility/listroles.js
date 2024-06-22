@@ -1,12 +1,12 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
-
 module.exports = {
     cooldown: 10,
     data: new SlashCommandBuilder()
         .setName('listroles')
         .setDescription('List all the roles in the server.'),
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         const roles = interaction.guild.roles.cache
             .filter(role => role.name !== '@everyone') // Exclude the @everyone role
             .sort((a, b) => b.position - a.position) // Sort roles by position

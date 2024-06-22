@@ -9,6 +9,7 @@ module.exports = {
         .setDescription('The role to fetch information about')
         .setRequired(true)),
   async execute(interaction) {
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     const role = interaction.options.getRole('role');
 
     // Fetching role information

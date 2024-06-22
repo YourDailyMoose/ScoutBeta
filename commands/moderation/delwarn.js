@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-
 const { getPunishment, deletePunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 
@@ -10,6 +9,7 @@ module.exports = {
         .addStringOption(option => option.setName('punishmentid').setDescription('The ID of the warning to delete').setRequired(true)),
     permission: ['warnRoles', 'adminRoles', 'godRoles'],
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         const punishmentId = interaction.options.getString('punishmentid');
         const punishment = await getPunishment(punishmentId);
 

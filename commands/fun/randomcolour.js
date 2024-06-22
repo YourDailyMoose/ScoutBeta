@@ -7,6 +7,7 @@ module.exports = {
     .setDescription('Generates a random color and6 displays it in an embed.'),
 
   async execute(interaction) {
+    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     // Make sure fetch is imported
     // Generate a random color
     const r = Math.floor(Math.random() * 256);

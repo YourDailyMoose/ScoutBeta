@@ -186,6 +186,7 @@ module.exports = {
                         .setRequired(true))),
     permission: ['adminRoles', 'godRoles'],
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         const subcommand = interaction.options.getSubcommand();
         const amount = interaction.options.getInteger('amount');
         const text = interaction.options.getString('text');
