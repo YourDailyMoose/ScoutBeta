@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 
 //PERMISSIONS
 module.exports = {
@@ -23,7 +23,7 @@ module.exports = {
 
         if (interaction.guild && interaction.guild.me && !interaction.guild.me.roles.highest.comparePositionTo(role) > 0) {
             const errorEmbed = new EmbedBuilder()
-                .setColor(botColours.red)
+                .setColor(guildColours.error)
                 .setTitle('Error')
                 .setDescription('I cannot give a role that is higher than or equal to my highest role.')
 
@@ -33,7 +33,7 @@ module.exports = {
         if (!interaction.member.roles.highest.comparePositionTo(user.roles.highest) > 0) {
             if (!(user.id === interaction.member.id)) {
                 const errorEmbed = new EmbedBuilder()
-                    .setColor(botColours.red)
+                    .setColor(guildColours.error)
                     .setTitle('Error')
                     .setDescription('You cannot change the roles of a member who has a role that is higher than or equal to your highest role.')
 
@@ -44,7 +44,7 @@ module.exports = {
         // Check if the command executor can give the role
         if (!interaction.member.roles.highest.comparePositionTo(role) > 0) {
             const errorEmbed = new EmbedBuilder()
-                .setColor(botColours.red)
+                .setColor(guildColours.error)
                 .setTitle('Error')
                 .setDescription('You cannot give a role that is higher than or equal to your highest role.')
 
@@ -56,7 +56,7 @@ module.exports = {
 
 
             const errorEmbed = new EmbedBuilder()
-                .setColor(botColours.red)
+                .setColor(guildColours.error)
                 .setTitle('Error')
                 .setDescription('I cannot give a role that is higher than or equal to my highest role.')
 
@@ -66,7 +66,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle('Role Update Error')
                 .setDescription(`User or role was not found.`)
-                .setColor(botColours.red);
+                .setColor(guildColours.error);
 
             interaction.reply({ embeds: [embed] });
         }
@@ -87,7 +87,7 @@ module.exports = {
         } catch (error) {
             if (error instanceof DiscordAPIError && error.code === 50013) {
                 const errorEmbed = new EmbedBuilder()
-                    .setColor(botColours.red)
+                    .setColor(guildColours.error)
                     .setTitle('Error')
                     .setDescription('I do not have the necessary permissions to manage roles OR I am unable to manage this role.');
 

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const { getGuildSettings, logPunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -27,7 +27,7 @@ module.exports = {
         const notBannedEmbed = new EmbedBuilder()
           .setTitle('User is not banned')
           .setDescription(`The user with ID \`${userId}\` is not banned.`)
-          .setColor(botColours.amber);
+          .setColor(guildColours.warning);
 
         return interaction.reply({ embeds: [notBannedEmbed], ephemeral: true });
       }
@@ -71,7 +71,7 @@ module.exports = {
       }
 
       const errorEmbed = new EmbedBuilder()
-        .setColor(botColours.red) // Red color
+        .setColor(guildColours.error) // Red color
         .setTitle('Error')
         .setDescription(errorMessage);
 

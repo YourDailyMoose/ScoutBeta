@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ChannelType, ActionRowBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const { registerGiveaway } = require('../../database.js')
 
 module.exports = {
@@ -43,7 +43,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setTitle('Giveaway')
             .setDescription(`Prize: **${prize}**\nWinners: **${winners}**\nHosted by: ${interaction.user}`)
-            .setColor(botColours.purple)
+            .setColor(guildColours.special)
             .setFooter({ text: 'Ends at' })
             .setTimestamp(endTime);
 

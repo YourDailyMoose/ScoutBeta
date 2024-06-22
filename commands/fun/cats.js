@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const axios = require('axios');
 const { v4: uuidv4 } = require("uuid");
 const fs = require('fs');
@@ -20,7 +20,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setTitle(`Random Cat Picture`)
         .setImage(data[0].url)
-        .setColor(botColours.primary)
+        .setColor(guildColours.primary)
         .setFooter({
           text: `Fetched from TheCatAPI`,
         });
@@ -42,7 +42,7 @@ module.exports = {
           text: `If this error persists, please contact support with the followwing error ID: ${errorId}`,
 
         })
-        .setColor(botColours.red);
+        .setColor(guildColours.error);
 
       const actionRow = new ActionRowBuilder()
         .addComponents(

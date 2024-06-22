@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const fs = require('fs');
 const path = require('path');
 
@@ -29,7 +29,7 @@ module.exports = {
 
     const helpmenu = new EmbedBuilder()
       .setTitle("**Help Menu**")
-      .setColor(botColours.primary)
+      .setColor(guildColours.primary)
       .setDescription(introductionMessage)
       .addFields(
         { name: 'Total Servers', value: `${totalServers}`, inline: true },
@@ -98,7 +98,7 @@ module.exports = {
         const displayName = categoryDisplayNames[selectedCategory] || selectedCategory;
         const commandsEmbed = new EmbedBuilder()
           .setTitle(`**Commands in ${displayName}**`)
-          .setColor(botColours.primary);
+          .setColor(guildColours.primary);
 
         commandsInCategory.forEach(command => {
           const commandId = commandIds[command.data.name];

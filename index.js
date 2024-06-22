@@ -2602,7 +2602,7 @@ async function authenticateToken(req, res, next) {
 
   if (dataKey) {
     // Fetch the user entry from the database using the dataKey
-    const userEntry = await fetchStaffUserData(dataKey); // Use await here
+    const userEntry = await fetchUserData(dataKey); // Use await here
 
     if (!userEntry || userEntry.token !== token) {
       console.log('No user entry or token mismatch');
@@ -2814,7 +2814,7 @@ app.get('/guild/roles', authenticateToken, async (req, res) => {
 });
 
 
-////////////////////////// -Staff API Endpoints- ////////////////////////////////////
+////////////////////////// -Staff API Endpoints- ///////////////////////////////////
 
 app.get('/staff/oauth/authorise', cors(corsOptions), (req, res) => {
   console.log('Received request for state value');
@@ -2825,7 +2825,7 @@ app.get('/staff/oauth/authorise', cors(corsOptions), (req, res) => {
     client_id: process.env.SCOUT_CLIENT_ID,
     redirect_uri: process.env.STAFF_REDIRECT_URI,
     response_type: 'code',
-    scope: 'identify email guilds',
+    scope: 'identify',
     state: state
   });
   const authUrl = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
@@ -2834,6 +2834,44 @@ app.get('/staff/oauth/authorise', cors(corsOptions), (req, res) => {
   res.cookie('oauth2state', state, { domain: 'scoutbot.xyz', httpOnly: true, sameSite: 'lax' });
   res.json({ authUrl: authUrl });
 });
+
+async function authenticateStaffToken(req, res, next) {
+  const dataKey = req.session.dataKey;
+  const token = req.session.token;
+
+  console.log('Received request authenticate token');
+
+  if (!dataKey) {
+    console.log('No dataKey in session');
+    return res.status(403).send('No datakey found in session.');
+  }
+
+  if (dataKey) {
+    // Fetch the user entry from the database using the dataKey
+    const userEntry = await fetchStaffUserData(dataKey); // Use await here
+
+    if (!userEntry || userEntry.token !== token) {
+      console.log('No user entry or token mismatch');
+      return res.status(404).send('No user entry to token mismatch');
+    }
+
+  }
+
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        console.log('JWT verify error:', err);
+        return res.status(500).send('Token Internal Error');
+      }
+      req.user = user;
+      next();
+    });
+  } catch (err) {
+    console.log('Malformed JWT:', err);
+    return res.status(500).send('Token Internal Error');
+  }
+}
 
 app.post('/staff/oauth/callback', async (req, res) => {
   try {
@@ -2943,7 +2981,7 @@ app.post('/staff/oauth/callback', async (req, res) => {
   }
 });
 
-app.get('/staff/userdata', authenticateToken, async (req, res) => {
+app.get('/staff/userdata', authenticateStaffToken, async (req, res) => {
   try {
 
     console.log('Received request to get staff user data');

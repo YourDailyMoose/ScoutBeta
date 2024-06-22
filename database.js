@@ -491,7 +491,7 @@ async function updateServerSettings(guildId, setting, value) {
   }
 
   if (setting === 'colours') {
-    if (typeof value !== 'object' || !('default' in value) || !('success' in value) || !('error' in value) || !('warning' in value)) {
+    if (typeof value !== 'object' || !('primary' in value) || !('success' in value) || !('error' in value) || !('warning' in value) || !('special' in value)) {
       throw new Error('Invalid value for colours setting');
     }
 
@@ -572,6 +572,12 @@ async function closeDatabaseConnection() {
   }
 }
 
+async function getGuildBotColours(guildId) {
+  const longGuildId = Long.fromString(guildId);
+  const guild = await db.collection('botSettings').findOne({ _id: longGuildId });
+  return guild.serverSettings.colours;
+}
+
 module.exports = {
   connectToDatabase,
   getDB,
@@ -606,6 +612,7 @@ module.exports = {
   staffOauthCallbackData,
   fetchStaffUserData,
   saveMetricsData,
-  closeDatabaseConnection
+  closeDatabaseConnection,
+  getGuildBotColours
 
 }

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle } = require('discord.js')
-const botColours = require('../../botColours.json');
+
 
 const quotes = [
     {
@@ -350,7 +350,7 @@ module.exports = {
 
         // Create an embed message
         const embed = new EmbedBuilder()
-            .setColor(botColours.purple)
+            .setColor(guildColours.special)
             .setTitle('Random Quote')
             .setDescription(`\"${randomQuote.quote}\" - ${randomQuote.author ? randomQuote.author : 'Unknown'}`);
 

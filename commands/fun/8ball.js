@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 
 
 module.exports = {
@@ -50,7 +50,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle('🎱 8-Ball')
       .setDescription(`Question: ${interaction.options.getString('question')}\nAnswer: ${responses[randomIndex]}`)
-      .setColor(botColours.purple)
+      .setColor(guildColours.special)
     
     interaction.reply({ embeds: [embed] });
 

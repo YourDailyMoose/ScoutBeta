@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -12,7 +12,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle('Dice Roll')
       .setDescription(`You rolled a **${outcome}**!`)
-      .setColor(botColours.purple)
+      .setColor(guildColours.special)
 
     await interaction.reply({ embeds: [embed] });
   },

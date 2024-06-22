@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 
 module.exports = {
     cooldown: 10,
@@ -15,7 +15,7 @@ module.exports = {
             const jokeEmbed = new EmbedBuilder()
                 .setTitle('Here\'s a joke for you!')
                 .setDescription(`${joke.setup}\n\n||${joke.punchline}||`)
-                .setColor(botColours.purple);
+                .setColor(guildColours.special);
 
             await interaction.reply({ embeds: [jokeEmbed] });
         } catch (error) {

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const { getPunishment, deletePunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 
@@ -17,7 +17,7 @@ module.exports = {
             const errorEmbed = new EmbedBuilder()
                 .setTitle('Error')
                 .setDescription('Invalid punishment ID.')
-                .setColor(botColours.red);
+                .setColor(guildColours.error);
 
             return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
@@ -26,7 +26,7 @@ module.exports = {
             const errorEmbed = new EmbedBuilder()
                 .setTitle('Error')
                 .setDescription('The specified punishment is not a warning.')
-                .setColor(botColours.red);
+                .setColor(guildColours.error);
 
             return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
@@ -50,7 +50,7 @@ module.exports = {
                 .setDescription('An error occurred while deleting the warning.')
                 .setFooter({ text: `Please contact support with the following error ID: ${errorId}` })
                 .setTimestamp()
-                .setColor(botColours.red);
+                .setColor(guildColours.error);
 
                 const supportServer = new ActionRowBuilder()
                 .addComponents(

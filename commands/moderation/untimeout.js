@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const { getGuildSettings, logPunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -18,18 +18,18 @@ module.exports = {
     const guildSettings = await getGuildSettings(interaction.guild.id);
 
     if (!targetMember) {
-      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Error').setDescription('The selected user is not in the server.').setColor(botColours.red)], ephemeral: true });
+      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Error').setDescription('The selected user is not in the server.').setColor(guildColours.error)], ephemeral: true });
     }
 
     if (guildSettings.moderationSettings && guildSettings.moderationSettings.requireReason && !reason) {
-      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Error').setDescription('You must provide a reason.').setColor(botColours.red)], ephemeral: true });
+      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Error').setDescription('You must provide a reason.').setColor(guildColours.error)], ephemeral: true });
     }
 
     let targetHighestRole = targetMember.roles.highest;
     let authorHighestRole = interaction.member.roles.highest;
 
     if (guildSettings.moderationSettings && guildSettings.moderationSettings.permissionHierarchy && authorHighestRole.position <= targetHighestRole.position) {
-      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Error').setDescription('You cannot untimeout users that are above your role.').setColor(botColours.red)], ephemeral: true });
+      return interaction.reply({ embeds: [new EmbedBuilder().setTitle('Error').setDescription('You cannot untimeout users that are above your role.').setColor(guildColours.error)], ephemeral: true });
     }
 
     try {
@@ -90,7 +90,7 @@ function handleUntimeoutError(error, interaction, targetMember) {
   const errorEmbed = new EmbedBuilder()
     .setTitle('Error')
     .setDescription(errorDescription)
-    .setColor(botColours.red)
+    .setColor(guildColours.error)
     .setTimestamp()
     .setFooter({ text: `Please contact support with the following error ID if the issue persists: ${errorId}` });
 

@@ -14,7 +14,7 @@ module.exports = {
             // Check if there are no banned members
             if (bannedMembers.size === 0) {
                 const noBannedEmbed = new EmbedBuilder()
-                    .setColor(botColours.amber)
+                    .setColor(guildColours.warning)
                     .setTitle("Ban List")
                     .setDescription('There are no banned users.')
 
@@ -36,7 +36,7 @@ module.exports = {
                 });
 
                 const banListEmbed = new EmbedBuilder()
-                    .setColor(botColours.primary)
+                    .setColor(guildColours.primary)
                     .setTitle(`Banned Users`)
                     .addFields(fieldsArray)
                     .setTimestamp()

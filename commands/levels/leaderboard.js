@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getGuildXpData, getUserLevel } = require('../../database');
-const botColours = require('../../botColours.json');
+
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,7 +15,7 @@ module.exports = {
         if (Object.keys(levels).length === 0) {
 
             const embed = new EmbedBuilder()
-                .setColor(botColours.amber)
+                .setColor(guildColours.warning)
                 .setTitle('Leaderboard')
                 .setDescription('There are no users with XP in this server. Time to get chatting!')
                 .setTimestamp();
@@ -38,7 +38,7 @@ module.exports = {
             }));
 
             const leaderboardEmbed = new EmbedBuilder()
-                .setColor(botColours.primary)
+                .setColor(guildColours.primary)
                 .setTitle(`Leaderboard for ${interaction.guild.name}`)
                 .setDescription(description.join('\n'))
                 .setTimestamp()

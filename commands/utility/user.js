@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 
 module.exports = {
   cooldown: 10,
@@ -20,7 +20,7 @@ module.exports = {
 
     const userInfoEmbed = new EmbedBuilder()
       .setTitle(`${user.username}'s Information`)
-      .setColor(botColours.primary)
+      .setColor(guildColours.primary)
       .setThumbnail(user.displayAvatarURL({ dynamic: true }))
       .addFields(
         { name: 'Username', value: `${user.username}#${user.discriminator}`, inline: true },

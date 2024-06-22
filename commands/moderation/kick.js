@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const { getGuildSettings, logPunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -29,7 +29,7 @@ module.exports = {
       const errorEmbed = new EmbedBuilder()
         .setTitle('Error')
         .setDescription('You must provide a reason.')
-        .setColor(botColours.red);
+        .setColor(guildColours.error);
 
       return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
@@ -38,7 +38,7 @@ module.exports = {
       const errorEmbed = new EmbedBuilder()
         .setTitle('Error')
         .setDescription('The selected user is not in the server.')
-        .setColor(botColours.red);
+        .setColor(guildColours.error);
 
       return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
@@ -55,7 +55,7 @@ module.exports = {
         const errorEmbed = new EmbedBuilder()
           .setTitle('Error')
           .setDescription('You cannot kick users that are above your role.')
-          .setColor(botColours.red);
+          .setColor(guildColours.error);
 
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
@@ -119,7 +119,7 @@ function handleKickError(error, interaction, targetMember) {
   const errorEmbed = new EmbedBuilder()
     .setTitle('Error')
     .setDescription(errorDescription)
-    .setColor(botColours.red)
+    .setColor(guildColours.error)
     .setTimestamp()
     .setFooter({ text: `Please contact support with the following error ID if the issue persists: ${errorId}` });
 

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -10,6 +10,7 @@ module.exports = {
                 .setDescription('The ID of the guild to leave')
                 .setRequired(false)),
     async execute(interaction) {
+        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         const guildId = interaction.options.getString('guild_id');
         let targetGuild;
 
@@ -24,7 +25,7 @@ module.exports = {
             }
 
             const leaveEmbed = new EmbedBuilder()
-                .setColor(botColours.red)
+                .setColor(guildColours.error)
                 .setTitle('Beta Access Revoked')
                 .setDescription(`This guild's beta access has been revoked. If you would like to re-enroll in the beta program, please contact support.`)
                 .addFields(
@@ -49,7 +50,7 @@ module.exports = {
             console.error('Error leaving guild:', error);
 
             const errorEmbed = new EmbedBuilder()
-                .setColor(botColours.red)
+                .setColor(guildColours.error)
                 .setTitle('Error')
                 .setDescription(`There was an error trying to leave the guild: ${error.message}`)
                 .setTimestamp();

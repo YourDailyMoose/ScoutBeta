@@ -19,7 +19,7 @@ module.exports = {
 
     if (modlogs.length === 0) {
       const noPunishmentsEmbed = new EmbedBuilder()
-        .setColor(botColours.amber)
+        .setColor(guildColours.warning)
         .setTitle('No Recorded Punishments')
         .setDescription(`No punishments were found for \`${user.tag}\`.`);
 
@@ -56,7 +56,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setTitle(`${user.tag}'s Modlogs`)
-      .setColor(botColours.primary);
+      .setColor(guildColours.primary);
 
       const updateEmbed = () => {
         const itemsToShow = modlogs.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);

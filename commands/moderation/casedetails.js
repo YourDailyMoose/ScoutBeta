@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const { getPunishment, updateReason } = require('../../database.js'); // Ensure updateReason is properly imported or defined
 
 module.exports = {
@@ -16,14 +16,14 @@ module.exports = {
             const errorEmbed = new EmbedBuilder()
                 .setTitle('Error')
                 .setDescription('Invalid Punishment ID.')
-                .setColor(botColours.red);
+                .setColor(guildColours.error);
             return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         }
     
         const caseDetailsEmbed = new EmbedBuilder()
             .setTitle(`Case Details for \`${punishment._id}\``)
             .setDescription(`**User:** <@${punishment.userId}>\n**Type:** ${punishment.punishmentType}\n**Reason:** ${punishment.reason}\n**Moderator:** <@${punishment.moderatorId}>\n**Timestamp:** ${new Date(punishment.timestamp).toUTCString()}`)
-            .setColor(botColours.primary);
+            .setColor(guildColours.primary);
     
         interaction.reply({ embeds: [caseDetailsEmbed] });
     }

@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getGuildSettings, logPunishment } = require('../../database.js');
-const botColours = require('../../botColours.json');
+
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
@@ -30,7 +30,7 @@ module.exports = {
       const errorEmbed = new EmbedBuilder()
         .setTitle('Error')
         .setDescription('You must provide a reason.')
-        .setColor(botColours.red);
+        .setColor(guildColours.error);
 
       return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
@@ -47,7 +47,7 @@ module.exports = {
         const errorEmbed = new EmbedBuilder()
           .setTitle('Error')
           .setDescription('You cannot warn users that are above your role.')
-          .setColor(botColours.red);
+          .setColor(guildColours.error);
 
         return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       }
@@ -77,7 +77,7 @@ module.exports = {
         const errorEmbed = new EmbedBuilder()
           .setTitle('Error')
           .setDescription(`There was an error logging your punishment. \n\nPlease contact support with this error ID: \`${errorId}\``)
-          .setColor(botColours.red);
+          .setColor(guildColours.error);
 
         const supportServer = new ActionRowBuilder()
           .addComponents(
@@ -105,7 +105,7 @@ module.exports = {
       const errorEmbed = new EmbedBuilder()
         .setTitle('Error')
         .setDescription(errorDescription)
-        .setColor(botColours.red)
+        .setColor(guildColours.error)
         .setTimestamp()
         .setFooter({ text: `Please contact support with the following error ID if the issue persists: ${errorId}` });
 

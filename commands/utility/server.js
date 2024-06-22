@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 
 module.exports = {
   cooldown: 10,
@@ -12,7 +12,7 @@ module.exports = {
 
     const serverInfoEmbed = new EmbedBuilder()
       .setTitle(`${guild.name}'s Information`)
-      .setColor(botColours.primary)
+      .setColor(guildColours.primary)
       .setThumbnail(guild.iconURL({ dynamic: true }))
       .addFields(
         { name: 'Server Name:', value: guild.name, inline: false },

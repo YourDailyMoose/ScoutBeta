@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const botColours = require('../../botColours.json');
+
 const { getGuildSettings, logPunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -65,7 +65,7 @@ module.exports = {
         const errorEmbed = new EmbedBuilder()
           .setTitle('Error')
           .setDescription(`There was an error logging your punishment. \n\nPlease contact support with this error ID: \`${errorId}\``)
-          .setColor(botColours.red);
+          .setColor(guildColours.error);
 
         const supportServer = new ActionRowBuilder()
           .addComponents(
@@ -122,7 +122,7 @@ function handleTimeoutError(error, interaction, targetMember) {
   const errorEmbed = new EmbedBuilder()
     .setTitle('Error')
     .setDescription(errorDescription)
-    .setColor(botColours.red)
+    .setColor(guildColours.error)
     .setTimestamp()
     .setFooter({ text: `Please contact support with the following error ID if the issue persists: ${errorId}` });
 
