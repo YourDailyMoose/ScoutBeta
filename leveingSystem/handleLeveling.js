@@ -1,6 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { getUserXP, addUserXP, getGuildSettings, getUserLevel } = require('../database.js');
-const botColours = require('../botColours.json');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid'); // Assuming you're using uuid for generating error IDs
 
@@ -16,6 +15,8 @@ async function handleExperienceGain(message) {
     handleGuildSettingsError(message);
     return;
   }
+
+  const guildColours = await require('../database.js').getGuildBotColours(message.guild.id)
 
   if (!guildSettings.modules.levels.enabled) {
     return;
@@ -66,7 +67,7 @@ function handleGuildSettingsError(message) {
   });
 
   const errorEmbed = new EmbedBuilder()
-    .setColor(botColours.red)
+    .setColor(guildColours.error)
     .setTitle("Error")
     .setDescription(
       `The guild settings could not be found for ${message.guild.name} (\`${message.guild.id}\`).\nPlease contact support with the following error ID: \`${errorId}\`.`

@@ -86,7 +86,7 @@ for (const folder of commandFolders) {
 //Events
 
 client.on("interactionCreate", async (interaction) => {
-  const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
+  const guildColours = await require('./database.js').getGuildBotColours(interaction.guild.id)
   if (interaction.isCommand()) {
     metrics.commandsRun++;
     const command = interaction.client.commands.get(interaction.commandName);
@@ -128,7 +128,7 @@ client.on("interactionCreate", async (interaction) => {
 
       if (!moduleEnabledStatus) {
         const embed = new EmbedBuilder()
-          .setColor(botColours.amber)
+          .setColor(guildColours.warning)
           .setTitle(`Module Disabled`)
           .setDescription(`The ${moduleName} module is currently disabled.`);
 
@@ -284,6 +284,7 @@ client.on("messageDeleteBulk", async (messages) => {
 });
 
 client.on("guildCreate", async (guild) => {
+  const guildColours = await require('./database.js').getGuildBotColours(guild.id)
 
   metrics.guildCount++;
   metrics.userCount += guild.memberCount;
@@ -293,7 +294,7 @@ client.on("guildCreate", async (guild) => {
   if (isUserBlacklisted) {
 
     const embed = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle(`You have been blacklisted from Scout.`)
       .setDescription('You are unable to add Scout to your server due to being blacklisted.')
       .addFields(
@@ -339,7 +340,7 @@ client.on("guildCreate", async (guild) => {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.green) // Make sure botColours.green is defined
+    .setColor(guildColours.success) // Make sure guildColours.success is defined
     .setTitle(`Welcome to Scout!`)
     .setDescription(
       `Thank you for inviting Scout to your server! Please ask Moose for assistance with setting up in your server's channel in our discord server.`
@@ -395,13 +396,14 @@ client.on("messageDelete", async (message) => {
   if (message.author.bot) return;
 
   const guildSettings = await getGuildSettings(message.guild.id);
+  const guildColours = await require('./database.js').getGuildBotColours(message.guild.id)
 
 
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${message.guild.name} (\`${message.guild.id}\`)\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -459,7 +461,7 @@ client.on("messageDelete", async (message) => {
   if (!loggingChannel) return;
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.red)
+    .setColor(guildColours.error)
     .setTitle("Message Deleted")
     .setDescription("A message was deleted.")
     .addFields(
@@ -494,11 +496,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   if (oldState.channelId === newState.channelId) return;
 
   const guildSettings = await getGuildSettings(oldState.guild.id);
+  const guildColours = await require('./database.js').getGuildBotColours(oldState.guild.id)
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${oldMessage.guild.name} (\`${oldMessage.guild.id}\`)\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -573,14 +576,14 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       embed = new EmbedBuilder()
         .setTitle('Voice Channel Update')
         .setDescription(`${newState.member} has ${action} ${oldChannel} to ${newChannel}.`)
-        .setColor(botColours.amber)
+        .setColor(guildColours.warning)
         .setTimestamp();
     } else {
       const channel = action === 'joined' ? newChannel : oldChannel;
       embed = new EmbedBuilder()
         .setTitle('Voice Channel Update')
         .setDescription(`${newState.member} has ${action} the voice channel ${channel}.`)
-        .setColor(botColours.amber)
+        .setColor(guildColours.warning)
         .setTimestamp();
     }
 
@@ -589,6 +592,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 });
 
 client.on("messageUpdate", async (oldMessage, newMessage) => {
+  const guildColours = await require('./database.js').getGuildBotColours(oldMessage.guild.id)
 
   if (oldMessage.partial) {
     try {
@@ -617,7 +621,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${oldMessage.guild.name} (\`${oldMessage.guild.id}\`)\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -673,7 +677,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
   if (!loggingChannel) return;
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.amber)
+    .setColor(guildColours.warning)
     .setTitle("Message Edited")
     .setDescription("A message was edited.")
     .addFields(
@@ -709,6 +713,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
 client.on('guildMemberAdd', async (member) => {
   const guild = member.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId)
   const guildSettings = await getGuildSettings(guildId);
 
   const welcomeMessages = guildSettings.modules.welcomeMessages;
@@ -716,7 +721,7 @@ client.on('guildMemberAdd', async (member) => {
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${member.guild.name} (\`${member.guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -768,7 +773,7 @@ client.on('guildMemberAdd', async (member) => {
 
   if (!messageChannel) {
     const error = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle('Error')
       .setDescription('The welcome channel could not be found.')
       .setTimestamp();
@@ -865,13 +870,14 @@ client.on('guildMemberRemove', async (member) => {
   const guild = member.guild;
   const guildId = guild.id;
   const guildSettings = await getGuildSettings(guildId);
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
 
   const leaveMessages = guildSettings.modules.leaveMessages;
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${member.guild.name} (\`${member.guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -922,7 +928,7 @@ client.on('guildMemberRemove', async (member) => {
 
   if (!messageChannel) {
     const error = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle('Error')
       .setDescription('The leave channel could not be found.')
       .setTimestamp();
@@ -1018,12 +1024,13 @@ client.on('guildMemberRemove', async (member) => {
 client.on('roleCreate', async (role) => {
   const guild = role.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -1094,7 +1101,7 @@ client.on('roleCreate', async (role) => {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.amber)
+    .setColor(guildColours.warning)
     .setTitle("Role Created")
     .setDescription("A role was created.")
     .addFields(fields)
@@ -1108,12 +1115,13 @@ client.on('roleCreate', async (role) => {
 client.on('roleUpdate', async (oldRole, newRole) => {
   const guild = newRole.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -1232,7 +1240,7 @@ client.on('roleUpdate', async (oldRole, newRole) => {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.amber)
+    .setColor(guildColours.warning)
     .setTitle("Role Updated")
     .setDescription("A role was updated.")
     .addFields(fields)
@@ -1245,12 +1253,13 @@ client.on('roleUpdate', async (oldRole, newRole) => {
 client.on('roleDelete', async (role) => {
   const guild = role.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -1321,7 +1330,7 @@ client.on('roleDelete', async (role) => {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.red)
+    .setColor(guildColours.error)
     .setTitle("Role Deleted")
     .setDescription("A role was deleted.")
     .addFields(fields)
@@ -1335,12 +1344,13 @@ client.on('roleDelete', async (role) => {
 client.on('channelCreate', async (channel) => {
   const guild = channel.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -1455,7 +1465,7 @@ client.on('channelCreate', async (channel) => {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.amber)
+    .setColor(guildColours.warning)
     .setTitle("Channel Created")
     .setDescription("A channel was created.")
     .addFields(fields)
@@ -1479,12 +1489,13 @@ client.on('channelUpdate', async (oldChannel, newChannel) => {
 
   const guild = newChannel.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -1592,7 +1603,7 @@ client.on('channelUpdate', async (oldChannel, newChannel) => {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.amber)
+    .setColor(guildColours.warning)
     .setTitle("Channel Updated")
     .setDescription("A channel was updated.")
     .addFields(fields)
@@ -1604,12 +1615,13 @@ client.on('channelUpdate', async (oldChannel, newChannel) => {
 client.on('channelDelete', async (channel) => {
   const guild = channel.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -1715,7 +1727,7 @@ client.on('channelDelete', async (channel) => {
   ];
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.red)
+    .setColor(guildColours.error)
     .setTitle("Channel Deleted")
     .setDescription("A channel was deleted.")
     .addFields(fields)
@@ -1727,14 +1739,13 @@ client.on('channelDelete', async (channel) => {
 client.on('guildBanAdd', async (guild, user) => {
   try {
     const guildId = guild.id;
-
-    console.log(guild.id)
     const guildSettings = await getGuildSettings(guildId);
+    const guildColours = await require('./database.js').getGuildBotColours(guildId);
 
     if (!guildSettings) {
       const errorId = uuidv4();
       const errorEmbed = new EmbedBuilder()
-        .setColor(botColours.red)
+        .setColor(guildColours.error)
         .setTitle("Error")
         .setDescription(
           `The guild settings could not be found for ${guild.name} (\`${guild.id}\`).\n\nPlease contact support with the following error ID:\n\`${errorId}\``
@@ -1792,7 +1803,7 @@ client.on('guildBanAdd', async (guild, user) => {
     if (!logChannel) return;
 
     const embed = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("User Banned")
       .setDescription(`${user.tag} (${user.id}) was banned.`)
       .setTimestamp();
@@ -1819,7 +1830,7 @@ client.on('guildBanAdd', async (guild, user) => {
 
     if (firstChannel) {
       const errorEmbed = new EmbedBuilder()
-        .setColor(botColours.red)
+        .setColor(guildColours.error)
         .setTitle("Error")
         .setDescription(
           `An error occurred while processing the ban for ${user.tag}.\n\nPlease contact support with the following error ID:\n\`${errorId}\``
@@ -1844,12 +1855,13 @@ client.on('guildBanAdd', async (guild, user) => {
 client.on('guildBanRemove', async (guild, user) => {
   try {
     const guildId = guild.id;
+    const guildColours = await require('./database.js').getGuildBotColours(guildId);
     const guildSettings = await getGuildSettings(guildId);
 
     if (!guildSettings) {
       const errorId = uuidv4();
       const errorEmbed = new EmbedBuilder()
-        .setColor(botColours.red)
+        .setColor(guildColours.error)
         .setTitle("Error")
         .setDescription(
           `The guild settings could not be found for ${guild.name} (\`${guild.id}\`).\n\nPlease contact support with the following error ID:\n\`${errorId}\``
@@ -1907,7 +1919,7 @@ client.on('guildBanRemove', async (guild, user) => {
     if (!logChannel) return;
 
     const embed = new EmbedBuilder()
-      .setColor(botColours.green)
+      .setColor(guildColours.success)
       .setTitle("User Unbanned")
       .setDescription(`${user.tag} (${user.id}) was unbanned.`)
       .setTimestamp();
@@ -1934,7 +1946,7 @@ client.on('guildBanRemove', async (guild, user) => {
 
     if (firstChannel) {
       const errorEmbed = new EmbedBuilder()
-        .setColor(botColours.red)
+        .setColor(guildColours.error)
         .setTitle("Error")
         .setDescription(
           `An error occurred while processing the unban for ${user.tag}.\n\nPlease contact support with the following error ID:\n\`${errorId}\``
@@ -1959,12 +1971,13 @@ client.on('guildBanRemove', async (guild, user) => {
 client.on('emojiCreate', async (emoji) => {
   const guild = emoji.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -2020,7 +2033,7 @@ client.on('emojiCreate', async (emoji) => {
   if (!logChannel) return;
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.amber)
+    .setColor(guildColours.warning)
     .setTitle("Emoji Created")
     .setDescription(`<:${emoji.name}:${emoji.id}> | ${emoji.name} (${emoji.id}) was created.`)
     .setTimestamp();
@@ -2031,12 +2044,13 @@ client.on('emojiCreate', async (emoji) => {
 client.on('emojiDelete', async (emoji) => {
   const guild = emoji.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -2092,7 +2106,7 @@ client.on('emojiDelete', async (emoji) => {
   if (!logChannel) return;
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.red)
+    .setColor(guildColours.error)
     .setTitle("Emoji Deleted")
     .setDescription(`${emoji.name} (${emoji.id}) was deleted.`)
     .setTimestamp();
@@ -2103,12 +2117,13 @@ client.on('emojiDelete', async (emoji) => {
 client.on('emojiUpdate', async (oldEmoji, newEmoji) => {
   const guild = newEmoji.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -2175,7 +2190,7 @@ client.on('emojiUpdate', async (oldEmoji, newEmoji) => {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.amber)
+    .setColor(guildColours.warning)
     .setTitle("Emoji Updated")
     .setDescription(`${oldEmoji.name} (${oldEmoji.id}) was updated.`)
     .addFields(fields)
@@ -2187,12 +2202,13 @@ client.on('emojiUpdate', async (oldEmoji, newEmoji) => {
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
   const guild = newMember.guild;
   const guildId = guild.id;
+  const guildColours = await require('./database.js').getGuildBotColours(guildId);
   const guildSettings = await getGuildSettings(guildId);
 
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
-      .setColor(botColours.red)
+      .setColor(guildColours.error)
       .setTitle("Error")
       .setDescription(
         `The guild settings could not be found for ${guild.name} (\`${guild.id}\`)\n\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -2320,7 +2336,7 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 
 
   const embed = new EmbedBuilder()
-    .setColor(botColours.amber)
+    .setColor(guildColours.warning)
     .setTitle("Member Updated")
     .setDescription(`${newMember.user.tag} (${newMember.id}) was updated.`)
     .addFields(fields)
@@ -2352,23 +2368,26 @@ async function saveMetricsAndExit() {
       ...metrics,
       timestamp: new Date()
     };
-    saveMetricsData(metricsData);
+    await saveMetricsData(metricsData);
     console.log('Metrics have been saved on shutdown');
   } catch (error) {
     console.error('Error saving metrics on shutdown:', error);
-  } finally {
-    process.exit(0);
   }
 }
 
 async function handleExit() {
   try {
     await saveMetricsAndExit();
-    await closeDatabaseConnection();
   } catch (error) {
     console.error('Error during exit:', error);
   } finally {
-    process.exit(0); // Ensure the process exits after tasks are complete
+    try {
+      await closeDatabaseConnection();
+    } catch (closeError) {
+      console.error('Error closing database connection:', closeError);
+    } finally {
+      process.exit(0);
+    }
   }
 }
 
@@ -2391,14 +2410,14 @@ client.once('ready', async () => {
   console.log(`Ready! Logged in as ${client.user.tag}`);
 
   // Fetch all active giveaways from the database
-  const activeGiveaways = await getAllGiveaways();
+  //const activeGiveaways = await getAllGiveaways();
 
-  if (activeGiveaways.length === 0) return;
+//  if (activeGiveaways.length === 0) return;
 
   // Schedule a task for each active giveaway
-  for (const giveaway of activeGiveaways) {
-    scheduleGiveawayEnd(giveaway, client);
-  }
+ // for (const giveaway of activeGiveaways) {
+    //scheduleGiveawayEnd(giveaway, client);
+ // }
 });
 
 

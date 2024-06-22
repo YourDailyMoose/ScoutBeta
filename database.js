@@ -2,12 +2,10 @@ const { MongoClient, ServerApiVersion, ObjectId, Long } = require('mongodb');
 const { DateTime } = require('luxon');
 const { v4: uuidv4 } = require('uuid');
 
-
 let db;
 
 // Path to your certificate
 const credentials = './mongoCert/X509-cert-6949459650898832615.pem';
-
 
 // MongoDB connection 
 const client = new MongoClient('mongodb+srv://scout.792kxhq.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority&appName=Scout', {
@@ -19,11 +17,15 @@ async function connectToDatabase() {
   try {
     await client.connect();
     db = client.db('botData');
+
+    // Registering the close event listener
+    client.on('close', () => {
+      console.log('MongoDB connection closed');
+    });
   } catch (error) {
     console.error('Error connecting to MongoDB:', error);
   }
 }
-
 
 function getDB() {
   return db;
@@ -529,7 +531,6 @@ async function getTicketInfo(ticketId) {
 }
 
 async function staffOauthCallbackData(userEntry) {
-
   const collection = client.db('websiteData').collection("staffUserData");
 
   // Update or insert user data in MongoDB
@@ -555,11 +556,6 @@ async function fetchStaffUserData(dataKey) {
 
 }
 
-async function saveMetricsData(data) {
-  const collection = db.collection("metricsData");
-  await collection.insertOne(data);
-}
-
 async function closeDatabaseConnection() {
   if (client) {
     try {
@@ -569,8 +565,23 @@ async function closeDatabaseConnection() {
       console.error('Error disconnecting from MongoDB:', error);
       throw error;
     }
+  } else {
+    console.log('MongoDB client is not provided or not initialized.');
   }
 }
+
+async function saveMetricsData(data) {
+  try {
+    const collection = db.collection("metricsData");
+    await collection.insertOne(data);
+    console.log('Data successfully saved to MongoDB');
+  } catch (error) {
+    console.error('Error saving data to MongoDB:', error);
+    throw error; // Rethrowing the error might be optional based on how you want to handle it.
+  }
+}
+
+
 
 async function getGuildBotColours(guildId) {
   const longGuildId = Long.fromString(guildId);

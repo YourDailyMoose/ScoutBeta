@@ -1,8 +1,9 @@
-const botColours = require("../botColours.json");
 const { EmbedBuilder } = require("discord.js");
 const { getGuildSettings } = require("../database.js");
 
 async function handleBulkMessageDelete(messages, client) {
+
+    const guildColours = await require('../../database').getGuildBotColours(message.guild.id)
 
     messages = messages.filter(message => !message.author.bot);
 
@@ -20,7 +21,7 @@ async function handleBulkMessageDelete(messages, client) {
     if (!guildSettings) {
         const errorId = uuidv4();
         const channelError = new EmbedBuilder()
-            .setColor(botColours.red)
+            .setColor(guildColours.error)
             .setTitle("Error")
             .setDescription(
                 `The guild settings could not be found for ${message.guild.name} (\`${message.guild.id}\`)\nPlease contact support with the following error ID\n\`${errorId}\``
@@ -79,7 +80,7 @@ async function handleBulkMessageDelete(messages, client) {
     let deletedMessages = '';
     let embeds = [];
     let currentEmbed = new EmbedBuilder()
-        .setColor(botColours.red)
+        .setColor(guildColours.error)
         .setTitle("Messages Purged");
 
     let messageCount = 0;
@@ -95,7 +96,7 @@ async function handleBulkMessageDelete(messages, client) {
             messageCount = 1; // Reset message count for the new embed
 
             currentEmbed = new EmbedBuilder()
-                .setColor(botColours.red)
+                .setColor(guildColours.error)
                 .setTitle("Messages Purged");
         } else {
             deletedMessages += tempMessage;
