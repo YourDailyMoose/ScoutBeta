@@ -100,7 +100,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setTitle(`Changed ${user.user.username}'s roles`)
             .setDescription(`\`${action}${role.name} (${role.id})\``)
-            .setColor(botColours.green);
+            .setColor(guildColours.success);
 
         await interaction.reply({ embeds: [embed] });
 

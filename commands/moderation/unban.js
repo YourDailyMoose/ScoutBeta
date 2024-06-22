@@ -40,7 +40,7 @@ module.exports = {
       const unbannedEmbed = new EmbedBuilder()
         .setTitle('User has been unbanned')
         .setDescription(`The user with ID \`${userId}\` has been unbanned.`)
-        .setColor(botColours.green)
+        .setColor(guildColours.success)
         .addFields(
           { name: 'Reason', value: reason, inline: true },
           { name: 'Moderator', value: interaction.user.tag, inline: true }

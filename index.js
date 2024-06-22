@@ -2,13 +2,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { Client, Collection, Events, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ChannelType,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder, SelectMenuBuilder, PermissionsBitField, ButtonStyle, ActivityType, IntegrationExpireBehavior, ApplicationCommandOptionWithChoicesAndAutocompleteMixin, SlashCommandStringOption, } = require("discord.js");
-const { connectToDatabase, setupServerdata, wipeGuildSettings, getGuildSettings, enterGiveaway, logoutUser, getAllGiveaways, isUserBlacklisted, oauthCallbackData, fetchUserData, getBotGuilds, updateGuildModuleSettings, getUserAccessToGuild, isModuleEnabled, updateServerSettings, getTicketInfo, staffOauthCallbackData, fetchStaffUserData, saveMetricsData, closeDatabaseConnection } = require("./database");
+const { connectToDatabase, setupServerdata, wipeGuildSettings, getGuildSettings, enterGiveaway, logoutUser, getAllGiveaways, isUserBlacklisted, oauthCallbackData, fetchUserData, getBotGuilds, updateGuildModuleSettings, getUserAccessToGuild, isModuleEnabled, updateServerSettings, getTicketInfo, staffOauthCallbackData, fetchStaffUserData, saveMetricsData, closeDatabaseConnection, getGuildBotColours } = require("./database");
 const { scheduleGiveawayEnd } = require('./giveawaySystem/verdictHandling.js');
 const { handleBulkMessageDelete } = require("./messageHandlers/messageBulkDelete.js");
 const { handleExperienceGain } = require("./leveingSystem/handleLeveling.js");
 const dotenv = require("dotenv");
 const { v4: uuidv4 } = require("uuid");
-const botColours = require('./botColours.json')
 const express = require('express');
 const cron = require('node-cron');
 const axios = require('axios');
@@ -87,7 +86,7 @@ for (const folder of commandFolders) {
 //Events
 
 client.on("interactionCreate", async (interaction) => {
-
+  const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
   if (interaction.isCommand()) {
     metrics.commandsRun++;
     const command = interaction.client.commands.get(interaction.commandName);
@@ -2332,7 +2331,7 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 
 setInterval(() => {
   metrics.uptime = client.uptime;
-}, 1000);
+}, 3600000); //60 mins
 
 cron.schedule('* * * * *', async () => {
   try {

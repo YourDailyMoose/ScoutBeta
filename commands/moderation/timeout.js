@@ -49,7 +49,7 @@ module.exports = {
 
         const timeoutEmbed = new EmbedBuilder()
           .setTitle('User has been timed out')
-          .setColor(botColours.green)
+          .setColor(guildColours.success)
           .setDescription(`Successfully timed out ${targetMember} for \`${duration}\` for \`${reason}\`.`)
           .setFooter({ text: `Punishment ID: ${punishmentId}` })
           .setTimestamp();

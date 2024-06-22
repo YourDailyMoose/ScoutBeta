@@ -42,7 +42,7 @@ module.exports = {
 
         const untimeoutEmbed = new EmbedBuilder()
           .setTitle('User\'s timeout has been lifted.')
-          .setColor(botColours.green)
+          .setColor(guildColours.success)
           .setDescription(`Successfully removed timeout from ${targetMember} for \`${reason}\`.`)
           .setFooter({ text: `Punishment ID: ${punishmentId}` })
           .setTimestamp();

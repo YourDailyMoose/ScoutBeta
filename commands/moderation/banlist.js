@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, ActionRowBuilder, EmbedBuilder, ButtonBuilder } = require('discord.js');
-const botColours = require('../../botColours.json')
 
 module.exports = {
     data: new SlashCommandBuilder()

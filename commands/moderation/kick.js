@@ -71,7 +71,7 @@ module.exports = {
 
         const kickedEmbed = new EmbedBuilder()
           .setTitle('User has been kicked')
-          .setColor(botColours.green)
+          .setColor(guildColours.success)
           .setDescription(`Successfully kicked ${targetMember} for \`${finalReason}\`.`)
           .setFooter({ text: `Punishment ID: ${punishmentId}` })
           .setTimestamp();

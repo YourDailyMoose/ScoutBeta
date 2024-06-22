@@ -58,7 +58,7 @@ module.exports = {
         await logPunishment(punishmentId, interaction.guild.id, targetMember.id, "Warning", finalReason, interaction.user.id, Date.now());
 
         const warnedEmbed = new EmbedBuilder()
-          .setColor(botColours.green)
+          .setColor(guildColours.success)
           .setTitle('User Warned')
           .setDescription(`Successfully warned ${targetMember} for \`${finalReason}\`.`)
           .setTimestamp()

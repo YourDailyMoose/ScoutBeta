@@ -64,7 +64,7 @@ module.exports = {
         const createdEmbed = new EmbedBuilder()
             .setTitle('Giveaway Created')
             .setDescription(`**Prize:** ${prize}\n**Winners:** ${winners}\n**Duration** ${durationStr}\n**Channel:** <#${channel.id}>`)
-            .setColor(botColours.green)
+            .setColor(guildColours.success)
             .setFooter({ text: `Message ID: ${message.id}`});
 
         interaction.reply({ embeds: [createdEmbed], ephemeral: true });

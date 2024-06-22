@@ -62,7 +62,7 @@ module.exports = {
 
       const bannedEmbed = new EmbedBuilder()
         .setTitle('User has been banned')
-        .setColor(botColours.green)
+        .setColor(guildColours.success)
         .setDescription(`Successfully banned ${user.tag} for \`${reason}\`.`)
         .setFooter({ text: `Punishment ID: ${punishmentId}` })
         .setTimestamp();

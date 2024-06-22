@@ -36,7 +36,7 @@ module.exports = {
             const successEmbed = new EmbedBuilder()
                 .setTitle('Success')
                 .setDescription(`Warning with the ID \`${punishment._id}\` has been deleted.\n\nReason: ${punishment.reason}\nModerator: <@${punishment.moderatorId}>\nTimestamp: ${new Date(punishment.timestamp).toUTCString()}`)
-                .setColor(botColours.green);
+                .setColor(guildColours.success);
 
             return interaction.reply({ embeds: [successEmbed] });
         } else {
