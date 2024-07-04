@@ -501,7 +501,6 @@ async function isModuleEnabled(guildId, moduleName) {
   // Get the module settings
   const moduleSettings = guildSettings.modules[moduleName];
 
-  // If the module settings is a boolean, return it
   // Otherwise, return the value of the "enabled" field
   return typeof moduleSettings === 'boolean' ? moduleSettings : moduleSettings.enabled;
 }
