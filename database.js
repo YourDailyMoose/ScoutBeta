@@ -604,7 +604,6 @@ async function saveMetricsData(data) {
 }
 
 
-
 async function getGuildBotColours(guildId) {
   const longGuildId = Long.fromString(guildId);
   const guild = await db.collection('botSettings').findOne({ _id: longGuildId });
