@@ -2347,9 +2347,9 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 
 setInterval(() => {
   metrics.uptime = client.uptime;
-}, 3600000); //60 mins
+}, 60000); //1 min
 
-cron.schedule('* * * * *', async () => {
+cron.schedule('0 * * * *', async () => { // Runs at the start of every hour
   try {
     const metricsData = {
       ...metrics,

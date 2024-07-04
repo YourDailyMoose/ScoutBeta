@@ -38,13 +38,28 @@ async function setupServerdata(guildId) {
   // If no document was found for the guild, insert new default settings
   if (!existingGuildData) {
     const guildData = {
-
       "_id": {
-        "$numberLong": `${guildId}`
+        "$numberLong": guildId
+      },
+      "serverSettings": {
+        "colours": {
+          "primary": "#69dc9e",
+          "success": "#bcf7cb",
+          "error": "#f6786a",
+          "warning": "#f8c57c",
+          "special": "#966FD6"
+        },
+        "timezone": "Australia/Sydney",
+        "nickname": ""
       },
       "moderationSettings": {
         "requireReason": false,
-        "permissionHierarchy": true
+        "permissionHierarchy": true,
+        "punishmentDM": {
+          "sendDM": false,
+          "stateReason": true,
+          "stateModerator": false
+        }
       },
       "rolePermissions": {
         "godRoles": [],
@@ -99,11 +114,17 @@ async function setupServerdata(guildId) {
             }
           }
         },
-        "moderation": true,
-        "fun": true,
-        "utility": true,
+        "moderation": {
+          "enabled": true
+        },
+        "fun": {
+          "enabled": true
+        },
+        "utility": {
+          "enabled": true
+        },
         "levels": {
-          "enabled": true,
+          "enabled": false,
           "levelRoles": [],
           "levelMessages": []
         },
@@ -120,6 +141,7 @@ async function setupServerdata(guildId) {
         }
       },
       "disabledCommands": []
+
     }
 
     const levelData = {
@@ -385,7 +407,7 @@ async function fetchUserData(dataKey) {
 
   const userData = await collection.findOne({ dataKey });
 
-  
+
   if (!userData) {
     return null;
   } else {
@@ -409,7 +431,7 @@ async function updateGuildModuleSettings(guildId, module, enabled) {
   const longGuildId = Long.fromString(guildId);
 
   const currentSettings = await collection.findOne({ _id: longGuildId });
-  
+
   if (currentSettings && currentSettings.modules[module] && currentSettings.modules[module].enabled === enabled) {
     return { message: 'No changes were made' };
   }
@@ -522,9 +544,9 @@ async function getBlacklists() {
 }
 
 async function getTicketInfo(ticketId) {
-  try{
-  const data = await db.collection('supportTickets').findOne({ _id: Long.fromString(ticketId) });
-  return data;
+  try {
+    const data = await db.collection('supportTickets').findOne({ _id: Long.fromString(ticketId) });
+    return data;
   } catch {
     return null;
   }
@@ -547,7 +569,7 @@ async function fetchStaffUserData(dataKey) {
 
   const userData = await collection.findOne({ dataKey });
 
-  
+
   if (!userData) {
     return null;
   } else {

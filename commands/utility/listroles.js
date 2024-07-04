@@ -6,7 +6,7 @@ module.exports = {
         .setName('listroles')
         .setDescription('List all the roles in the server.'),
     async execute(interaction) {
-        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
+        const guildColours = await require('../../database.js').getGuildBotColours(interaction.guild.id)
         const roles = interaction.guild.roles.cache
             .filter(role => role.name !== '@everyone') // Exclude the @everyone role
             .sort((a, b) => b.position - a.position) // Sort roles by position
@@ -19,4 +19,4 @@ module.exports = {
             
         interaction.reply({ embeds: [roleEmbed] });
     },
-};
+}; 
