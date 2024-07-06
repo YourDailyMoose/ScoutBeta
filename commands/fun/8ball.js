@@ -24,11 +24,11 @@ module.exports = {
       'Meh',
       'Sure, why not?',
       'Ask again later.',
-      'I dont care',
-      'Go away',
-      'No u',
-      'LOL NO',
-      'When pigs can fly',
+      'I don\'t care.',
+      'Go away.',
+      'No u.',
+      'LOL NO.',
+      'When pigs can fly.',
       'What a dumb question, don\'t waste my time.',
       'It\'s possible.',
       'It\'s unlikely.',
@@ -37,9 +37,33 @@ module.exports = {
       'I would say no.',
       'There\'s a good chance.',
       'There\'s a slim chance.',
-      'LOL NAH KEEP DREAMIN\' BUCKO',
-      'yeah no',
-      
+      'LOL NAH KEEP DREAMIN\' BUCKO.',
+      'Yeah no.',
+      'Absolutely!',
+      'No way.',
+      'Of course!',
+      'Not in a million years.',
+      'Certainly.',
+      'Not a chance.',
+      'Without a doubt.',
+      'I doubt it.',
+      'For sure!',
+      'Negative.',
+      'Affirmative.',
+      'Nope.',
+      'You bet!',
+      'Don\'t think so.',
+      'Sure thing!',
+      'Nah.',
+      'Why not?',
+      'No way, Jose!',
+      'Totally!',
+      'In your dreams.',
+      'Absolutely sure!',
+      'Fat chance.',
+      'Without question.',
+      'No can do.',
+      'Nuh uh.'
     ];
 
     // Generate a random index to pick a response
@@ -50,7 +74,7 @@ module.exports = {
       .setTitle('🎱 8-Ball')
       .setDescription(`Question: ${interaction.options.getString('question')}\nAnswer: ${responses[randomIndex]}`)
       .setColor(guildColours.special)
-    
+
     interaction.reply({ embeds: [embed] });
 
   },
