@@ -7,7 +7,7 @@ let db;
 // Path to your certificate
 const credentials = process.env.DB_CERT_PATH;
 
-console.log(provess.env.DB_CERT_PATH);
+console.log(process.env.DB_CERT_PATH);
 
 const dbURI = process.env.MONGODB_URI;
 
