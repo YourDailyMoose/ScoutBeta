@@ -5,10 +5,10 @@ const { v4: uuidv4 } = require('uuid');
 let db;
 
 // Path to your certificate
-const credentials = './mongoCert/X509-cert-6949459650898832615.pem';
+const credentials = process.env.DB_CERT_PATH;
 
 // MongoDB connection 
-const client = new MongoClient('mongodb+srv://scout.792kxhq.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority&appName=Scout', {
+const client = new MongoClient(process.env.MONGODB_URI, {
   tlsCertificateKeyFile: credentials,
   serverApi: ServerApiVersion.v1,
 });
