@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fs = require("node:fs");
 const path = require("node:path");
 const { Client, Collection, Events, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ChannelType,
@@ -6,13 +7,12 @@ const { connectToDatabase, setupServerdata, wipeGuildSettings, getGuildSettings,
 const { scheduleGiveawayEnd } = require('./giveawaySystem/verdictHandling.js');
 const { handleBulkMessageDelete } = require("./messageHandlers/messageBulkDelete.js");
 const { handleExperienceGain } = require("./leveingSystem/handleLeveling.js");
-const dotenv = require("dotenv");
 const { v4: uuidv4 } = require("uuid");
 const express = require('express');
 const cron = require('node-cron');
 const axios = require('axios');
 const { MongoClient, Long, ServerApiVersion, ConnectionPoolReadyEvent } = require('mongodb');
-dotenv.config();
+
 
 const client = new Client({
   intents: [
