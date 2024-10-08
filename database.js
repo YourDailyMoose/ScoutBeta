@@ -267,6 +267,30 @@ async function addUserXP(guildID, userID, xpGain) {
 
 }
 
+async function removeUserXP(guildID, userID, xpLoss) {
+  const longGuildId = Long.fromString(guildID);
+  const guild = await db.collection('guildLevels').findOne({ _id: longGuildId });
+
+  if (!(userID in guild.levels)) {
+    // If the user isn't in the guild's levels, return false
+    return false;
+  } else {
+    // If the user is in the guild's levels, check their XP
+    if (guild.levels[userID] <= 0 || guild.levels[userID] < xpLoss) {
+      // If the user's XP is 0 or less than the amount to remove, return false
+      return false;
+    }
+
+    // Otherwise, decrease their XP by xpLoss
+    guild.levels[userID] -= xpLoss;
+    await db.collection('guildLevels').updateOne({ _id: longGuildId }, { $set: { levels: guild.levels } });
+  }
+
+  const updatedGuild = await db.collection('guildLevels').findOne({ _id: longGuildId });
+  return true;
+}
+
+
 async function getGuildXpData(guildID) {
   const longGuildId = Long.fromString(guildID);
   return await db.collection('guildLevels').findOne({ _id: longGuildId });
@@ -614,6 +638,7 @@ module.exports = {
   getDB,
   getUserXP,
   addUserXP,
+  removeUserXP,
   setupServerdata,
   wipeGuildSettings,
   getGuildSettings,
