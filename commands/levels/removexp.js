@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getGuildBotColours, removeUserXP } = require('../../database');
-const { removeUserXP, getUserXP } = require('../../database');
+const { getGuildBotColours, removeUserXP, getUserXP } = require('../../database');
 
 module.exports = {
     cooldown: 5,
@@ -21,7 +20,7 @@ module.exports = {
         const xp = interaction.options.getInteger('xp');
         const userXP = await getUserXP(interaction.guild.id, user.id);
         const removeXP = removeUserXP(interaction.guild.id, user.id, xp);
-        if (!removeUserXP) {
+        if (!removeXP) {
             return interaction.reply({
                 embeds: [
                     new EmbedBuilder()
