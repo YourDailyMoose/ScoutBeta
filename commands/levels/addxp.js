@@ -19,8 +19,8 @@ module.exports = {
         const guildColours = await getGuildBotColours(interaction.guild.id);
         const user = interaction.options.getUser('user');
         const xp = interaction.options.getInteger('xp');
-        const userXP = await getUserXP(user.id, interaction.guild.id);
-        const addXP = addUserXP(user.id, interaction.guild.id, xp);
+        const userXP = await getUserXP(interaction.guild.id, user.id);
+        const addXP = addUserXP(interaction.guild.id, user.id, xp);
         if (!addXP) {
             return interaction.reply({
                 embeds: [
