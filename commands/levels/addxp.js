@@ -28,7 +28,6 @@ module.exports = {
                     .setColor(guildColours.error)
                     .setDescription(`User has no XP or an error occurred.`)
                     .setTimestamp()
-                    .build()
                 ]
             });
         }
@@ -38,7 +37,6 @@ module.exports = {
             .setColor(guildColours.success)
             .setDescription(`Added ${xp} XP to ${user.tag}! They now have ${userXP + xp} XP.`)
             .setTimestamp()
-            .build()
         ]
         });
     }
