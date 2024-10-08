@@ -26,6 +26,7 @@ module.exports = {
                 embeds: [
                     new EmbedBuilder()
                     .setColor(guildColours.error)
+                    .setTitle(`Error`)
                     .setDescription(`User has no XP or an error occurred.`)
                     .setTimestamp()
                 ]
@@ -35,6 +36,7 @@ module.exports = {
         embeds: [
             new EmbedBuilder()
             .setColor(guildColours.success)
+            .setTitle(`Success`)
             .setDescription(`Added ${xp} XP to ${user.tag}! They now have ${userXP + xp} XP.`)
             .setTimestamp()
         ]
