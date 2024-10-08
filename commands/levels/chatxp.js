@@ -150,11 +150,11 @@ if (emojiImage) {
 module.exports = {
   cooldown: 20,
   data: new SlashCommandBuilder()
-    .setName('rank')
-    .setDescription('Displays the rank of a user')
+    .setName('chatxp')
+    .setDescription('Displays the chat xp of a user')
     .addUserOption(option =>
       option.setName('user')
-        .setDescription('The user to display the rank for')
+        .setDescription('The user to display the xp for')
         .setRequired(false)),
   async execute(interaction) {
     const user = interaction.options.getUser('user') || interaction.member.user;
