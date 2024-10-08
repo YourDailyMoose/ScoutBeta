@@ -16,25 +16,15 @@ module.exports = {
             .setDescription('The amount of XP to remove')
             .setRequired(true)),
     async execute(interaction) {
-        console.log('Command executed: removexp');
+        
         
         const guildColours = await getGuildBotColours(interaction.guild.id);
-        console.log('Guild Colours:', guildColours);
-        
         const user = interaction.options.getUser('user');
-        console.log('Target User:', user);
-        
         const xp = interaction.options.getInteger('xp');
-        console.log('XP to remove:', xp);
-        
         const userXP = await getUserXP(interaction.guild.id, user.id);
-        console.log('Current User XP:', userXP);
-        
         const removeXP = await removeUserXP(interaction.guild.id, user.id, xp);
-        console.log('Remove XP Result:', removeXP);
         
         if (!removeXP) {
-            console.log('Failed to remove XP');
             return interaction.reply({
                 embeds: [
                     new EmbedBuilder()
@@ -46,7 +36,6 @@ module.exports = {
             });
         }
         
-        console.log('Successfully removed XP');
         interaction.reply({
             embeds: [
                 new EmbedBuilder()
