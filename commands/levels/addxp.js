@@ -1,4 +1,4 @@
-const [ SlashCommandBuilder, EmbedBuilder ] = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getGuildBotColours } = require('../../database');
 const { addUserXP, getUserXP } = require('../../database');
 
