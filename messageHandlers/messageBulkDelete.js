@@ -1,9 +1,9 @@
 const { EmbedBuilder } = require("discord.js");
-const { getGuildSettings } = require("../database.js");
+const { getGuildSettings, getGuildBotColours } = require("../database.js");
 
 async function handleBulkMessageDelete(messages, client) {
 
-    const guildColours = await require('../../database').getGuildBotColours(message.guild.id)
+    const guildColours = getGuildBotColours(message.guild.id)
 
     messages = messages.filter(message => !message.author.bot);
 
