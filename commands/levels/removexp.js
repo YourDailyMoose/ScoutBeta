@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getGuildBotColours, removeUserXP } = require('../../database');
-const { addUserXP, getUserXP } = require('../../database');
+const { removeUserXP, getUserXP } = require('../../database');
 
 module.exports = {
     cooldown: 5,
