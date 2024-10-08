@@ -37,7 +37,7 @@ module.exports = {
             new EmbedBuilder()
             .setColor(guildColours.success)
             .setTitle(`Success`)
-            .setDescription(`Added ${xp} XP to ${user.tag}! They now have ${userXP + xp} XP.`)
+            .setDescription(`Added ${xp} XP to ${user}! They now have ${userXP + xp} XP.`)
             .setTimestamp()
         ]
         });
