@@ -1,5 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ChannelType, ActionRowBuilder } = require('discord.js');
-const { registerGiveaway } = require('../../database.js')
+import { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ChannelType, ActionRowBuilder } from 'discord.js';
+const { registerGiveaway } = require('../../database.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -27,61 +27,60 @@ module.exports = {
                 .setRequired(true)),
 
     async execute(interaction) {
-        const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
-        const prize = interaction.options.getString('prize');
-        const winners = interaction.options.getInteger('winners');
-        const durationStr = interaction.options.getString('duration');
-        const channel = interaction.options.getChannel('channel');
-        const guildId = interaction.guild.id;
-        const channelId = channel.id
+        // const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
+        // const prize = interaction.options.getString('prize');
+        // const winners = interaction.options.getInteger('winners');
+        // const durationStr = interaction.options.getString('duration');
+        // const channel = interaction.options.getChannel('channel');
+        // const guildId = interaction.guild.id;
+        // const channelId = channel.id
 
-        // Parse the duration string
-        const duration = parseDuration(durationStr);
+        // // Parse the duration string
+        // const duration = parseDuration(durationStr);
 
-        const endTime = new Date(Date.now() + duration * 60 * 1000);
+        // const endTime = new Date(Date.now() + duration * 60 * 1000);
 
-        const embed = new EmbedBuilder()
-            .setTitle('Giveaway')
-            .setDescription(`Prize: **${prize}**\nWinners: **${winners}**\nHosted by: ${interaction.user}`)
-            .setColor(guildColours.special)
-            .setFooter({ text: 'Ends at' })
-            .setTimestamp(endTime);
+        // const embed = new EmbedBuilder()
+        //     .setTitle('Giveaway')
+        //     .setDescription(`Prize: **${prize}**\nWinners: **${winners}**\nHosted by: ${interaction.user}`)
+        //     .setColor(guildColours.special)
+        //     .setFooter({ text: 'Ends at' })
+        //     .setTimestamp(endTime);
 
-        const button = new ButtonBuilder()
-            .setLabel('Enter')
-            .setEmoji('🎉')
-            .setStyle('Primary')
-            .setCustomId('enter_giveaway');
+        // const button = new ButtonBuilder()
+        //     .setLabel('Enter')
+        //     .setEmoji('🎉')
+        //     .setStyle('Primary')
+        //     .setCustomId('enter_giveaway');
 
-        const row = new ActionRowBuilder()
-            .addComponents(button);
+        // const row = new ActionRowBuilder()
+        //     .addComponents(button);
 
-        const message = await interaction.options.getChannel('channel').send({ embeds: [embed], components: [row] });
+        // const message = await interaction.options.getChannel('channel').send({ embeds: [embed], components: [row] });
 
-        await registerGiveaway(guildId, channelId, message.id, prize, winners, duration, Date.now());
+        // await registerGiveaway(guildId, channelId, message.id, prize, winners, duration, Date.now());
 
+        // const createdEmbed = new EmbedBuilder()
+        //     .setTitle('Giveaway Created')
+        //     .setDescription(`**Prize:** ${prize}\n**Winners:** ${winners}\n**Duration** ${durationStr}\n**Channel:** <#${channel.id}>`)
+        //     .setColor(guildColours.success)
+        //     .setFooter({ text: `Message ID: ${message.id}` });
 
-        const createdEmbed = new EmbedBuilder()
-            .setTitle('Giveaway Created')
-            .setDescription(`**Prize:** ${prize}\n**Winners:** ${winners}\n**Duration** ${durationStr}\n**Channel:** <#${channel.id}>`)
-            .setColor(guildColours.success)
-            .setFooter({ text: `Message ID: ${message.id}`});
-
-        interaction.reply({ embeds: [createdEmbed], ephemeral: true });
+        interaction.reply({ text: 'This command is not currently available.', ephemeral: true });
     }
-};
-
-function parseDuration(str) {
-    const units = {
-        d: 60 * 24,
-        h: 60,
-        m: 1,
-        s: 1 / 60
-    };
-
-    return str.split(' ').reduce((total, chunk) => {
-        const unit = chunk.slice(-1);
-        const value = parseInt(chunk.slice(0, -1));
-        return total + (value * units[unit]);
-    }, 0);
 }
+
+// function parseDuration(str) {
+//     const units = {
+//         d: 60 * 24,
+//         h: 60,
+//         m: 1,
+//         s: 1 / 60
+//     };
+
+//     return str.split(' ').reduce((total, chunk) => {
+//         const unit = chunk.slice(-1);
+//         const value = parseInt(chunk.slice(0, -1));
+//         return total + (value * units[unit]);
+//     }, 0);
+// }
