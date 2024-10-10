@@ -35,7 +35,6 @@ let metrics = {
   messagesSent: 0,
   errors: 0,
   latency: 0,
-  uptime: 0
 };
 
 // Interval to flush metrics every minute
@@ -47,7 +46,6 @@ let metricsQueue = {
   messagesSent: 0,
   errors: 0,
   latency: 0,
-  uptime: 0,
 };
 
 // Helper function to aggregate metrics
@@ -56,7 +54,6 @@ function accumulateMetrics() {
   metricsQueue.messagesSent += metrics.messagesSent;
   metricsQueue.errors += metrics.errors;
   metricsQueue.latency += metrics.latency;
-  metricsQueue.uptime += metrics.uptime;
 
   // Reset in-memory metrics to avoid duplication
   metrics = {
@@ -64,7 +61,6 @@ function accumulateMetrics() {
     messagesSent: 0,
     errors: 0,
     latency: 0,
-    uptime: 0
   };
 }
 
@@ -97,7 +93,6 @@ async function flushMetricsToDB() {
       messagesSent: 0,
       errors: 0,
       latency: 0,
-      uptime: 0,
     };
   } catch (error) {
     console.error("Error saving metrics:", error);
@@ -2413,10 +2408,6 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
   logChannel.send({ embeds: [embed] });
 });
 
-// Update uptime regularly
-setInterval(() => {
-  metrics.uptime = client.uptime;
-}, 60000); // Update uptime every minute
 
 // Function to flush metrics before shutdown
 async function saveMetricsOnExit() {
