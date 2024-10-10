@@ -2349,6 +2349,18 @@ setInterval(() => {
   metrics.uptime = client.uptime;
 }, 60000); //1 min
 
+async function resetMetrics() {
+  metrics = {
+    guildCount: 0,
+    userCount: 0,
+    commandsRun: 0,
+    messagesSent: 0,
+    uptime: 0,
+    errors: 0,
+    latency: 0,
+  };
+}
+
 cron.schedule('0 * * * *', async () => { // Runs at the start of every hour
   try {
     const metricsData = {
@@ -2357,12 +2369,16 @@ cron.schedule('0 * * * *', async () => { // Runs at the start of every hour
     };
     await saveMetricsData(metricsData);
     console.log('Metrics saved:', metricsData);
+    resetMetrics();
+    console.log('Metrics reset', metricsData);
   } catch (error) {
     console.error('Error saving metrics:', error);
   }
 });
 
-async function saveMetricsAndExit() {
+
+
+async function saveMetricsOnExit() {
   try {
     const metricsData = {
       ...metrics,
@@ -2375,9 +2391,11 @@ async function saveMetricsAndExit() {
   }
 }
 
+
+
 async function handleExit() {
   try {
-    await saveMetricsAndExit();
+    await saveMetricsOnExit();
   } catch (error) {
     console.error('Error during exit:', error);
   } finally {
@@ -2412,12 +2430,12 @@ client.once('ready', async () => {
   // Fetch all active giveaways from the database
   //const activeGiveaways = await getAllGiveaways();
 
-//  if (activeGiveaways.length === 0) return;
+  //  if (activeGiveaways.length === 0) return;
 
   // Schedule a task for each active giveaway
- // for (const giveaway of activeGiveaways) {
-    //scheduleGiveawayEnd(giveaway, client);
- // }
+  // for (const giveaway of activeGiveaways) {
+  //scheduleGiveawayEnd(giveaway, client);
+  // }
 });
 
 
