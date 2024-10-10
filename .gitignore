@@ -6,3 +6,5 @@ ssl
 mongoCert
 error.log
 command-ids.json
+db.json
+botColours.json
