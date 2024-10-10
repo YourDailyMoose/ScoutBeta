@@ -5,3 +5,4 @@ gitingnore
 ssl
 mongoCert
 error.log
+command-ids.json
