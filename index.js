@@ -29,15 +29,86 @@ const client = new Client({
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
 
+// In-memory metrics storage
 let metrics = {
-  guildCount: 0,
-  userCount: 0,
   commandsRun: 0,
   messagesSent: 0,
-  uptime: 0,
   errors: 0,
   latency: 0,
+  uptime: 0
 };
+
+// Interval to flush metrics every minute
+const metricsFlushInterval = 60000; // 1 minute
+
+// A queue to store accumulated metrics changes
+let metricsQueue = {
+  commandsRun: 0,
+  messagesSent: 0,
+  errors: 0,
+  latency: 0,
+  uptime: 0,
+};
+
+// Helper function to aggregate metrics
+function accumulateMetrics() {
+  metricsQueue.commandsRun += metrics.commandsRun;
+  metricsQueue.messagesSent += metrics.messagesSent;
+  metricsQueue.errors += metrics.errors;
+  metricsQueue.latency += metrics.latency;
+  metricsQueue.uptime += metrics.uptime;
+
+  // Reset in-memory metrics to avoid duplication
+  metrics = {
+    commandsRun: 0,
+    messagesSent: 0,
+    errors: 0,
+    latency: 0,
+    uptime: 0
+  };
+}
+
+// Function to fetch guild count dynamically
+function getGuildCount() {
+  return client.guilds.cache.size;
+}
+
+// Function to fetch user count dynamically
+function getUserCount() {
+  return client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
+}
+
+// Function to flush metrics to the database
+async function flushMetricsToDB() {
+  try {
+    const timestamp = new Date();
+    const metricsData = {
+      ...metricsQueue,
+      guildCount: getGuildCount(),
+      userCount: getUserCount(),
+      timestamp,
+    };
+    await saveMetricsData(metricsData);  // Ensure saveMetricsData is async
+    console.log("Metrics saved:", metricsData);
+
+    // Reset metricsQueue after flushing
+    metricsQueue = {
+      commandsRun: 0,
+      messagesSent: 0,
+      errors: 0,
+      latency: 0,
+      uptime: 0,
+    };
+  } catch (error) {
+    console.error("Error saving metrics:", error);
+  }
+}
+
+// Set up interval to accumulate and flush metrics
+setInterval(() => {
+  accumulateMetrics();
+  flushMetricsToDB();
+}, metricsFlushInterval);
 
 connectToDatabase()
   .then(() => {
@@ -285,9 +356,6 @@ client.on("messageDeleteBulk", async (messages) => {
 
 client.on("guildCreate", async (guild) => {
   const guildColours = await require('./database.js').getGuildBotColours(guild.id)
-
-  metrics.guildCount++;
-  metrics.userCount += guild.memberCount;
 
   const isUserBlacklisted = await isUserBlacklisted(guild.ownerId);
 
@@ -2345,73 +2413,42 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
   logChannel.send({ embeds: [embed] });
 });
 
+// Update uptime regularly
 setInterval(() => {
   metrics.uptime = client.uptime;
-}, 60000); //1 min
+}, 60000); // Update uptime every minute
 
-async function resetMetrics() {
-  metrics = {
-    guildCount: 0,
-    userCount: 0,
-    commandsRun: 0,
-    messagesSent: 0,
-    uptime: 0,
-    errors: 0,
-    latency: 0,
-  };
+// Function to flush metrics before shutdown
+async function saveMetricsOnExit() {
+  console.log("Saving metrics before shutdown...");
+  await flushMetricsToDB();  // Make sure to flush metrics to the DB
+  console.log("Metrics saved successfully. Shutting down...");
+  process.exit(0);  // Exit the process after saving
 }
 
-cron.schedule('0 * * * *', async () => { // Runs at the start of every hour
-  try {
-    const metricsData = {
-      ...metrics,
-      timestamp: new Date()
-    };
-    await saveMetricsData(metricsData);
-    console.log('Metrics saved:', metricsData);
-    resetMetrics();
-    console.log('Metrics reset', metricsData);
-  } catch (error) {
-    console.error('Error saving metrics:', error);
-  }
+// Catch SIGINT (Ctrl+C)
+process.on('SIGINT', async () => {
+  console.log("SIGINT received...");
+  await saveMetricsOnExit();
 });
 
+// Catch SIGTERM (when process is killed)
+process.on('SIGTERM', async () => {
+  console.log("SIGTERM received...");
+  await saveMetricsOnExit();
+});
 
+// Catch unhandled exceptions to prevent crash without saving
+process.on('uncaughtException', async (err) => {
+  console.error("Uncaught exception:", err);
+  await saveMetricsOnExit();
+});
 
-async function saveMetricsOnExit() {
-  try {
-    const metricsData = {
-      ...metrics,
-      timestamp: new Date()
-    };
-    await saveMetricsData(metricsData);
-    console.log('Metrics have been saved on shutdown');
-  } catch (error) {
-    console.error('Error saving metrics on shutdown:', error);
-  }
-}
-
-
-
-async function handleExit() {
-  try {
-    await saveMetricsOnExit();
-  } catch (error) {
-    console.error('Error during exit:', error);
-  } finally {
-    try {
-      await closeDatabaseConnection();
-    } catch (closeError) {
-      console.error('Error closing database connection:', closeError);
-    } finally {
-      process.exit(0);
-    }
-  }
-}
-
-process.on('SIGINT', handleExit);
-process.on('SIGTERM', handleExit);
-
+// Catch unhandled promise rejections
+process.on('unhandledRejection', async (err) => {
+  console.error("Unhandled rejection:", err);
+  await saveMetricsOnExit();
+});
 
 client.once('ready', async () => {
 
@@ -2420,10 +2457,6 @@ client.once('ready', async () => {
     name: "customstatus",
     state: "Join the beta program!",
   });
-
-  metrics.guildCount = client.guilds.cache.size;
-  metrics.userCount = client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0);
-  metrics.latency = client.ws.ping;
 
   console.log(`Ready! Logged in as ${client.user.tag}`);
 
