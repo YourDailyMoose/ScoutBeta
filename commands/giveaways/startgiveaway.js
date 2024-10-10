@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ChannelType, ActionRowBuilder } from 'discord.js';
+const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ChannelType, ActionRowBuilder } = require('discord.js');
 const { registerGiveaway } = require('../../database.js');
 
 module.exports = {
