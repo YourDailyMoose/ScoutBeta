@@ -15,7 +15,6 @@ module.exports = {
         const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
         const max = interaction.options.getInteger('max') || 100;
         let answer = Math.floor(Math.random() * max) + 1; // Random number between 1 and max
-        console.log(answer);
 
         await interaction.reply(`I have a number between 1 and ${max}. Can you guess it? You have 30 seconds!`);
 
