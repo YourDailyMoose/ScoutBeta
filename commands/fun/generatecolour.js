@@ -3,19 +3,39 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 module.exports = {
   cooldown: 10,
   data: new SlashCommandBuilder()
-    .setName('randomcolor')
-    .setDescription('Generates a random color and6 displays it in an embed.'),
+    .setName('generatecolour')
+    .setDescription('Generates a random colour or displays the provided colour.')
+    .addStringOption(option =>
+      option.setName('hex')
+        .setDescription('Provide a hex colour code (e.g., #ff5733) or leave blank for a random colour.')
+        .setRequired(false)),
 
   async execute(interaction) {
-    const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
-    // Make sure fetch is imported
-    // Generate a random color
-    const r = Math.floor(Math.random() * 256);
-    const g = Math.floor(Math.random() * 256);
-    const b = Math.floor(Math.random() * 256);
+    const userColour = interaction.options.getString('colour');
+    
+    let r, g, b, hex;
+    
+    if (userColour) {
+      // Validate the provided colour (assuming it is in hex format #rrggbb)
+      const isValidHex = /^#[0-9A-Fa-f]{6}$/i.test(userColour);
+      if (!isValidHex) {
+        return interaction.reply({ content: 'Invalid colour provided. Please use a valid hex code (e.g., #ff5733).', ephemeral: true });
+      }
+      
+      hex = userColour;
+      // Convert hex to RGB
+      r = parseInt(hex.slice(1, 3), 16);
+      g = parseInt(hex.slice(3, 5), 16);
+      b = parseInt(hex.slice(5, 7), 16);
+    } else {
+      // Generate a random colour
+      r = Math.floor(Math.random() * 256);
+      g = Math.floor(Math.random() * 256);
+      b = Math.floor(Math.random() * 256);
 
-    // Convert to HEX
-    const hex = '#' + ((r << 16) + (g << 8) + b).toString(16).padStart(6, '0');
+      // Convert to HEX
+      hex = '#' + ((r << 16) + (g << 8) + b).toString(16).padStart(6, '0');
+    }
 
     // Convert to RGB
     const rgb = `${r}, ${g}, ${b}`;
@@ -64,8 +84,8 @@ module.exports = {
     // Create an embed
     const embed = new EmbedBuilder()
       .setColor(hex)
-      .setTitle('Random Color')
-      .setDescription(`**Hex**: ${hex}\n**RGB**: ${r}, ${g}, ${b}\n**HSL**: ${hsl}\n**CMYK**: ${cmyk}`)
+      .setTitle(userColour ? 'Provided Colour' : 'Random Colour')
+      .setDescription(`**Hex**: ${hex}\n**RGB**: ${rgb}\n**HSL**: ${hsl}\n**CMYK**: ${cmyk}`)
       .setThumbnail(imageUrl);
 
     // Send the embed

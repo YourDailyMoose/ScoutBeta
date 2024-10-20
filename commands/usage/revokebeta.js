@@ -13,6 +13,10 @@ module.exports = {
         const guildId = interaction.options.getString('guild_id');
         let targetGuild;
 
+        if (!interaction.member.id === '574783977223749632') {
+            return interaction.reply({ content: 'You are not permitted to run this command.', ephemeral: true });
+        }
+
         try {
             if (guildId) {
                 targetGuild = await interaction.client.guilds.fetch(guildId);
