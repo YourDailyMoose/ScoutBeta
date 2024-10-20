@@ -8,7 +8,7 @@ module.exports = {
     .setDescription('Generates a random colour or displays the provided colour.')
     .addStringOption(option =>
       option.setName('colour')
-        .setDescription('Provide a hex colour code or colour name (e.g., #ff5733 or "red") or leave blank for a random colour.')
+        .setDescription('Provide a hex code, colour name (#ff5733 or \'red\'), or leave blank for random.')
         .setRequired(false)),
 
   async execute(interaction) {
