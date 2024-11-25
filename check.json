@@ -1,0 +1,167 @@
+{
+    "_id": {
+        "$numberLong": "736727136618020868"
+    },
+    "serverSettings": {
+        "colours": {
+            "primary": "#69dc9e",
+            "success": "#bcf7cb",
+            "error": "#f6786a",
+            "warning": "#f8c57c",
+            "special": "#966FD6"
+        },
+        "timezone": "Australia/Sydney",
+        "nickname": ""
+    },
+    "rolePermissions": {
+        "godRoles": [
+            "736770508250546267",
+            "1211249397183283312"
+        ],
+        "adminRoles": [
+            "1242468469115715655"
+        ],
+        "banRoles": [
+            "1211231075532144660"
+        ],
+        "kickRoles": [
+            "1211231075532144660"
+        ],
+        "muteRoles": [
+            "1211231075532144660"
+        ],
+        "warnRoles": [
+            "1211231075532144660"
+        ]
+    },
+    "modules": {
+        "welcomeMessages": {
+            "enabled": false,
+            "channelId": "1144258112912637952",
+            "message": {
+                "embed": {
+                    "enabled": false,
+                    "author": {
+                        "name": "",
+                        "icon": {
+                            "type": "none",
+                            "url": ""
+                        }
+                    },
+                    "title": "Welcome to the server!",
+                    "url": "",
+                    "description": "Thanks for joining the server, <user>!",
+                    "fields": [
+                        {
+                            "name": "",
+                            "value": "",
+                            "inline": false
+                        }
+                    ],
+                    "thumbnail": {
+                        "type": "none",
+                        "url": ""
+                    },
+                    "image": {
+                        "type": "none",
+                        "url": ""
+                    },
+                    "footer": {
+                        "text": "",
+                        "icon": {
+                            "type": "none",
+                            "url": ""
+                        }
+                    },
+                    "color": 11566958
+                },
+                "text": {
+                    "enabled": false,
+                    "content": "Welcome to the server, <user>!"
+                }
+            }
+        },
+        "leaveMessages": {
+            "enabled": false,
+            "channelId": "1144258112912637952",
+            "message": {
+                "embed": {
+                    "enabled": false,
+                    "author": {
+                        "name": "",
+                        "icon": {
+                            "type": "none",
+                            "url": ""
+                        }
+                    },
+                    "title": "Goodbye!",
+                    "url": "",
+                    "description": "Goodbye, <user>!",
+                    "fields": [
+                        {
+                            "name": "",
+                            "value": "",
+                            "inline": false
+                        }
+                    ],
+                    "thumbnail": {
+                        "type": "none",
+                        "url": ""
+                    },
+                    "image": {
+                        "type": "none",
+                        "url": ""
+                    },
+                    "footer": {
+                        "text": "",
+                        "icon": {
+                            "type": "none",
+                            "url": ""
+                        }
+                    },
+                    "color": 11566958
+                },
+                "text": {
+                    "enabled": false,
+                    "content": "Goodbye, <user>!"
+                }
+            }
+        },
+        "moderation": {
+            "enabled": true,
+            "settings": {
+                "requireReason": false,
+                "permissionHierarchy": true,
+                "punishmentDM": {
+                    "sendDM": true,
+                    "stateReason": true,
+                    "stateModerator": false
+                }
+            },
+            "fun": {
+                "enabled": true
+            },
+            "utility": {
+                "enabled": true,
+                "joinRoles": {}
+            },
+            "levels": {
+                "enabled": true,
+                "levelRoles": [],
+                "levelMessages": []
+            },
+            "logging": {
+                "enabled": true,
+                "loggingChannels": {
+                    "moderation": null,
+                    "joinLeave": null,
+                    "message": "1172774350999527434",
+                    "voice": null,
+                    "memberChanges": null,
+                    "serverChanges": "1172774350999527434"
+                }
+            }
+        },
+        "disabledCommands": []
+    }
+}

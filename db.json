@@ -63,9 +63,16 @@
                 }
             }
         },
-        "moderation": true,
+        "moderation": {
+            "enabled": true,
+            "requireReason": false,
+            "permissionHierarchy": true
+        },
         "fun": true,
-        "utility": true,
+        "utility": {
+            "enabled": true,
+            "joinRoles": {}
+        },
         "levels": {
             "enabled": true,
             "levelRoles": [],

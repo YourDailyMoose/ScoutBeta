@@ -1,7 +1,8 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { getUserXP, addUserXP, getGuildSettings, getUserLevel } = require('../database.js');
 const fs = require('fs');
-const { v4: uuidv4 } = require('uuid'); // Assuming you're using uuid for generating error IDs
+const { v4: uuidv4 } = require('uuid');
+const guildColours = await require('./database.js').getGuildBotColours(interaction.guild.id)
 
 const cooldowns = new Map();
 
@@ -67,6 +68,7 @@ function handleGuildSettingsError(message) {
   });
 
   const errorEmbed = new EmbedBuilder()
+  
     .setColor(guildColours.error)
     .setTitle("Error")
     .setDescription(

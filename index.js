@@ -148,7 +148,6 @@ for (const folder of commandFolders) {
 //Events
 
 client.on("interactionCreate", async (interaction) => {
-  const guildColours = await require('./database.js').getGuildBotColours(interaction.guild.id)
   if (interaction.isCommand()) {
     metrics.commandsRun++;
     const command = interaction.client.commands.get(interaction.commandName);
@@ -189,6 +188,7 @@ client.on("interactionCreate", async (interaction) => {
       const moduleEnabledStatus = await isModuleEnabled(interaction.guild.id, moduleName);
 
       if (!moduleEnabledStatus) {
+        const guildColours = await require('./database.js').getGuildBotColours(interaction.guild.id)
         const embed = new EmbedBuilder()
           .setColor(guildColours.warning)
           .setTitle(`Module Disabled`)
