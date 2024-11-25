@@ -1930,9 +1930,16 @@ client.on('guildBanAdd', async (guild, user) => {
 client.on('guildBanRemove', async (guild, user) => {
   try {
     const guildId = guild.id;
+    console.log(`guildBanRemove event triggered for guildId: ${guildId}, userId: ${user.id}`);
+    
     const guildColours = await require('./database.js').getGuildBotColours(guildId);
-    const guildSettings = await getGuildSettings(guildId);
+    if (!guildColours) {
+      console.error('Error: guildColours is undefined');
+      return;
+    }
+    console.log('guildColours:', guildColours);
 
+    const guildSettings = await getGuildSettings(guildId);
     if (!guildSettings) {
       const errorId = uuidv4();
       const errorEmbed = new EmbedBuilder()
