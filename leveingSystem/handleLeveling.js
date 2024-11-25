@@ -2,7 +2,6 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder } = require('discord.js');
 const { getUserXP, addUserXP, getGuildSettings, getUserLevel } = require('../database.js');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
-const guildColours = await require('./database.js').getGuildBotColours(interaction.guild.id)
 
 const cooldowns = new Map();
 
@@ -16,8 +15,6 @@ async function handleExperienceGain(message) {
     handleGuildSettingsError(message);
     return;
   }
-
-  const guildColours = await require('../database.js').getGuildBotColours(message.guild.id)
 
   if (!guildSettings.modules.levels.enabled) {
     return;
@@ -68,7 +65,7 @@ function handleGuildSettingsError(message) {
   });
 
   const errorEmbed = new EmbedBuilder()
-  
+  const guildColours = require('../database.js').getGuildBotColours(message.guild.id)
     .setColor(guildColours.error)
     .setTitle("Error")
     .setDescription(
