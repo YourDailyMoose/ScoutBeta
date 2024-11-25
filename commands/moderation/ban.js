@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, DiscordAPIError, ActionRowBuilder, Bu
 const { getGuildSettings, logPunishment } = require('../../database.js');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
-const ms = require('ms'); // Import the ms package
+const ms = require('ms');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -12,26 +12,23 @@ module.exports = {
     .addUserOption(option => option.setName('user').setDescription('User to ban').setRequired(true))
     .addStringOption(option => option.setName('reason').setDescription('Reason for ban').setRequired(false))
     .addStringOption(option => option.setName('delete_duration').setDescription('Duration of messages to delete (e.g., 1d, 7d)').setRequired(false)),
-  permission: ['banRoles', 'adminRoles', 'godRoles'], // Adjust the permission to reflect ban permissions
+  permission: ['banRoles', 'adminRoles', 'godRoles'],
   async execute(interaction) {
     const guildColours = await require('../../database').getGuildBotColours(interaction.guild.id)
     const user = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason') || 'No reason provided';
     const deleteDuration = interaction.options.getString('delete_duration') || '0d';
 
-    if (!interaction.guild) {
-      return interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
-    }
-
-    const guildId = interaction.guild.id;
+    const guildId = await interaction.guild.id;
+    console.log(`Guild ID = ${guildId}`);
     let guildSettings;
     try {
-      guildSettings = await getGuildSettings(guildId);
+      guildSettings = await getGuildSettings(guildId); 
     } catch (err) {
       return handleBanError(err, interaction, user, 'Error fetching guild settings');
     }
 
-    if (guildSettings.moderationSettings && guildSettings.moderationSettings.requireReason && !reason) {
+    if (guildSettings.modules.moderation.settings && guildSettings.modules.moderation.settings.requireReason && !reason) {
       const errorEmbed = new EmbedBuilder()
         .setTitle('Error')
         .setDescription('You must provide a reason.')
