@@ -634,7 +634,14 @@ async function getGuildBotColours(guildId) {
   }
   console.log(`getGuildBotColours called with guildId: ${guildId}`);
   const longGuildId = Long.fromString(guildId);
-  return await db.collection('botColours').findOne({ _id: longGuildId });
+  
+  const guildSettings = await db.collection('botSettings').findOne({ _id: longGuildId });
+  if (!guildSettings || !guildSettings.serverSettings.colours) {
+    console.error(`Error: No colours found for guildId: ${guildId}`);
+    return;
+  }
+  
+  return guildSettings.serverSettings.colours;
 }
 
 module.exports = {
