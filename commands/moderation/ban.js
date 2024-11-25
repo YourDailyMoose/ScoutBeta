@@ -20,7 +20,7 @@ module.exports = {
     const deleteDuration = interaction.options.getString('delete_duration') || '0d';
 
     const guildId = await interaction.guild.id;
-    console.log(`Guild ID = ${guildId}`);
+    
     let guildSettings;
     try {
       guildSettings = await getGuildSettings(guildId); 

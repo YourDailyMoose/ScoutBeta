@@ -628,9 +628,13 @@ async function saveMetricsData(data) {
 
 
 async function getGuildBotColours(guildId) {
+  if (!guildId) {
+    console.error('Error: guildId is undefined');
+    return;
+  }
+  console.log(`getGuildBotColours called with guildId: ${guildId}`);
   const longGuildId = Long.fromString(guildId);
-  const guild = await db.collection('botSettings').findOne({ _id: longGuildId });
-  return guild.serverSettings.colours;
+  return await db.collection('botColours').findOne({ _id: longGuildId });
 }
 
 module.exports = {

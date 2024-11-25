@@ -8,10 +8,6 @@ const { scheduleGiveawayEnd } = require('./giveawaySystem/verdictHandling.js');
 const { handleBulkMessageDelete } = require("./messageHandlers/messageBulkDelete.js");
 const { handleExperienceGain } = require("./leveingSystem/handleLeveling.js");
 const { v4: uuidv4 } = require("uuid");
-const express = require('express');
-const cron = require('node-cron');
-const axios = require('axios');
-const { MongoClient, Long, ServerApiVersion, ConnectionPoolReadyEvent } = require('mongodb');
 
 
 const client = new Client({
@@ -781,6 +777,8 @@ client.on('guildMemberAdd', async (member) => {
 
   const welcomeMessages = guildSettings.modules.welcomeMessages;
 
+  const joinRoles = guildSettings.modules.utility.joinRoles;
+
   if (!guildSettings) {
     const errorId = uuidv4();
     const channelError = new EmbedBuilder()
@@ -826,6 +824,17 @@ client.on('guildMemberAdd', async (member) => {
       console.log(
         `No suitable channel found to send message in guild ${guild.id}`
       );
+    }
+  }
+
+  if (joinRoles.length) {
+    const rolesToAdd = joinRoles.map((roleId) => guild.roles.cache.get(roleId));
+    if (rolesToAdd.length) {
+      try {
+        await member.roles.add(rolesToAdd);
+      } catch (error) {
+        console.error("Failed to add join roles to the member:", error);
+      }
     }
   }
 
@@ -1802,8 +1811,10 @@ client.on('channelDelete', async (channel) => {
 client.on('guildBanAdd', async (guild, user) => {
   try {
     const guildId = guild.id;
-    const guildSettings = await getGuildSettings(guildId);
+    console.log(`guildBanAdd event triggered for guildId: ${guildId}, userId: ${user.id}`);
+    
     const guildColours = await require('./database.js').getGuildBotColours(guildId);
+    const guildSettings = await getGuildSettings(guildId);
 
     if (!guildSettings) {
       const errorId = uuidv4();
@@ -1881,7 +1892,13 @@ client.on('guildBanAdd', async (guild, user) => {
       if (err) throw err;
     });
 
-    // Sending error information to a designated channel (optional)
+    const supportServer = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Support Server")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://discord.gg/BwD7MgVMuq")
+    );
+
     const firstChannel = guild.channels.cache
       .filter(
         (c) =>
@@ -1892,25 +1909,20 @@ client.on('guildBanAdd', async (guild, user) => {
       .first();
 
     if (firstChannel) {
-      const errorEmbed = new EmbedBuilder()
-        .setColor(guildColours.error)
-        .setTitle("Error")
-        .setDescription(
-          `An error occurred while processing the ban for ${user.tag}.\n\nPlease contact support with the following error ID:\n\`${errorId}\``
-        )
-        .setTimestamp();
-
-      const supportServer = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel("Support Server")
-          .setStyle(ButtonStyle.Link)
-          .setURL("https://discord.gg/BwD7MgVMuq")
-      );
-
       await firstChannel.send({
         embeds: [errorEmbed],
         components: [supportServer],
       });
+    } else {
+      console.log(
+        "Channels in the guild:",
+        guild.channels.cache.map(
+          (channel) => `${channel.name} (${channel.type})`
+        )
+      );
+      console.log(
+        `No suitable channel found to send message in guild ${guild.id}`
+      );
     }
   }
 });
