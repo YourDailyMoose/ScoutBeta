@@ -1929,6 +1929,10 @@ client.on('guildBanAdd', async (guild, user) => {
 
 client.on('guildBanRemove', async (guild, user) => {
   try {
+    if (!guild) {
+      console.error('Error: guild is undefined');
+      return;
+    }
     const guildId = guild.id;
     console.log(`guildBanRemove event triggered for guildId: ${guildId}, userId: ${user.id}`);
     
@@ -1961,6 +1965,11 @@ client.on('guildBanRemove', async (guild, user) => {
           .setStyle(ButtonStyle.Link)
           .setURL("https://discord.gg/BwD7MgVMuq")
       );
+
+      if (!guild.channels) {
+        console.error('Error: guild.channels is undefined');
+        return;
+      }
 
       const firstChannel = guild.channels.cache
         .filter(
@@ -2016,7 +2025,11 @@ client.on('guildBanRemove', async (guild, user) => {
       if (err) throw err;
     });
 
-    // Sending error information to a designated channel (optional)
+    if (!guild.channels) {
+      console.error('Error: guild.channels is undefined');
+      return;
+    }
+
     const firstChannel = guild.channels.cache
       .filter(
         (c) =>
